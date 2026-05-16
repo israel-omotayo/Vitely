@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service — {{ business.name|default:"Vitely" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+
+  <h1 class="text-3xl font-bold text-text-base mb-2">Terms of Service</h1>
+  <p class="text-sm text-muted mb-10">Last updated: {% now "F Y" %}</p>
+
+  <div class="space-y-8 text-sm leading-relaxed text-text-base">
+
+    <section>
+      <p class="text-muted">
+        By booking a service through {{ business.name|default:"this platform" }},
+        you agree to these terms. Please read them — they're short.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Bookings</h2>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li>Your slot is held for <strong class="text-text-base">30 minutes</strong> after submitting. It is only confirmed once you click the verification link in your email.</li>
+        <li>Cancellations must be made at least <strong class="text-text-base">{{ business.cancellation_notice_hours|default:"24" }} hours</strong> before your appointment. Late cancellations may not be accepted.</li>
+        <li>Please arrive on time. Late arrivals may result in a shortened or forfeited session.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Your Responsibilities</h2>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li>Provide accurate contact information when booking</li>
+        <li>Notify us as early as possible if you need to cancel</li>
+        <li>Don't attempt to abuse or manipulate the booking system</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Your Information</h2>
+      <p class="text-muted">
+        We collect your name and email to manage your booking.
+        We don't sell it or use it for advertising.
+        See our <a href="{% url 'bookings:privacy' %}" class="text-primary hover:underline">Privacy Policy</a> for details.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Service Changes</h2>
+      <p class="text-muted">
+        {{ business.name|default:"We" }} reserve the right to cancel or reschedule appointments
+        due to unforeseen circumstances. If we cancel your booking, you will be notified
+        by email as soon as possible.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Limitation of Liability</h2>
+      <p class="text-muted">
+        {{ business.name|default:"We" }} are not liable for any loss, injury, or damage arising
+        from the use of our services beyond what is required by applicable law.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Changes to These Terms</h2>
+      <p class="text-muted">
+        We may update these terms from time to time.
+        Continued use of the booking platform after changes are posted means you accept the updated terms.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Questions?</h2>
+      <p class="text-muted">
+        Contact <strong class="text-text-base">{{ business.name|default:"us" }}</strong> directly
+        for any questions about these terms or your booking.
+      </p>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}

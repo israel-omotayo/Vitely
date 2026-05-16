@@ -1,0 +1,127 @@
+{% comment %}
+HTMX partial: injected into #booking-form-area when a slot pill is tapped.
+Context: form (BookingForm), service, start_dt
+{% endcomment %}
+
+<div class="bg-surface border border-border rounded-2xl p-5">
+
+  <!-- Slot summary banner -->
+  <div class="flex items-center gap-3 bg-primary/8 border border-primary/20 rounded-xl px-4 py-3 mb-5">
+    <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+    <div class="min-w-0">
+      <p class="text-xs font-semibold text-primary">{{ service.name }}</p>
+      <p class="text-sm font-bold text-text-base">{{ start_dt|date:"l, j F Y · H:i" }}</p>
+    </div>
+  </div>
+
+  {# Display all form errors (field + non-field) in one visible place #}
+    {% if form.errors %}
+    <div class="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-xl">
+        <p class="text-sm font-semibold text-danger mb-1">Please correct the following errors:</p>
+        <ul class="text-xs text-danger space-y-1 list-disc list-inside">
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+            <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+  <h3 class="font-semibold text-text-base mb-4 text-sm">Your details</h3>
+
+  <form method="post"
+        action="{% url 'bookings:confirm_booking' slug=service.slug %}"
+        hx-post="{% url 'bookings:confirm_booking' slug=service.slug %}"
+        hx-target="#booking-form-area"
+        hx-swap="innerHTML">
+    {% csrf_token %}
+
+    <!-- Hidden fields -->
+    <input type="hidden" name="start_datetime" value="{{ form.start_datetime.value|date:'Y-m-d H:i:s' }}">
+    <input type="hidden" name="service_id"     value="{{ form.service_id.value }}">
+
+    <div class="space-y-3">
+
+      <!-- Name -->
+      <div>
+        <label for="id_customer_name" class="block text-xs font-semibold text-text-base mb-1">Full name <span class="text-danger">*</span></label>
+        <input type="text" id="id_customer_name" name="customer_name"
+               value="{{ form.customer_name.value|default:'' }}"
+               placeholder="Full name"
+               required
+               class="w-full px-3 py-2.5 text-sm bg-bg border border-border rounded-xl
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                      placeholder:text-muted/60 transition-colors">
+        {% if form.customer_name.errors %}
+          {% for e in form.customer_name.errors %}
+            <p class="mt-1 text-xs text-danger">{{ e }}</p>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label for="id_customer_email" class="block text-xs font-semibold text-text-base mb-1">Email address <span class="text-danger">*</span></label>
+        <input type="email" id="id_customer_email" name="customer_email"
+               value="{{ form.customer_email.value|default:'' }}"
+               placeholder="you@example.com"
+               required
+               class="w-full px-3 py-2.5 text-sm bg-bg border border-border rounded-xl
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                      placeholder:text-muted/60 transition-colors">
+        {% if form.customer_email.errors %}
+          {% for e in form.customer_email.errors %}
+            <p class="mt-1 text-xs text-danger">{{ e }}</p>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Phone -->
+      <div>
+        <label for="id_customer_phone" class="block text-xs font-semibold text-text-base mb-1">Phone <span class="text-muted font-normal">(optional)</span></label>
+        <input type="tel" id="id_customer_phone" name="customer_phone"
+               value="{{ form.customer_phone.value|default:'' }}"
+               placeholder="+234 800 000 0000"
+               class="w-full px-3 py-2.5 text-sm bg-bg border border-border rounded-xl
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                      placeholder:text-muted/60 transition-colors">
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label for="id_notes" class="block text-xs font-semibold text-text-base mb-1">Notes <span class="text-muted font-normal">(optional)</span></label>
+        <textarea id="id_notes" name="notes" rows="2"
+                  placeholder="Anything we should know?"
+                  class="w-full px-3 py-2.5 text-sm bg-bg border border-border rounded-xl
+                         focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                         placeholder:text-muted/60 transition-colors resize-none">{{ form.notes.value|default:'' }}</textarea>
+      </div>
+
+    </div>
+
+    <!-- Non-field errors -->
+    {% if form.non_field_errors %}
+      <div class="mt-3 p-3 bg-danger/8 border border-danger/20 rounded-xl">
+        {% for e in form.non_field_errors %}
+          <p class="text-xs text-danger">{{ e }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <button type="submit"
+            class="mt-4 w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-xl
+                   transition-colors text-sm shadow-sm shadow-primary/20 flex items-center justify-center gap-2">
+      <span>Confirm booking</span>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+      </svg>
+    </button>
+
+    <p class="mt-3 text-xs text-center text-muted">
+      A verification link will be sent to your email to confirm this booking.
+    </p>
+  </form>
+
+</div>

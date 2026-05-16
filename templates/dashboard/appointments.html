@@ -1,0 +1,232 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Appointments{% endblock %}
+{% block header_label %}Appointments{% endblock %}
+
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 class="text-xl font-bold text-text-base">Appointments</h1>
+    <p class="text-sm text-muted mt-0.5">
+      {{ total_count }} result{{ total_count|pluralize }}
+      {% if dto.search %}for &ldquo;{{ dto.search }}&rdquo;{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'dashboard:new_booking' %}"
+     class="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    New booking
+  </a>
+</div>
+
+<!-- Filter bar -->
+<form method="get" class="bg-surface border border-border rounded-2xl p-4 mb-5">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+    <div>
+      <label class="block text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">Search</label>
+      <input type="text" name="q" value="{{ request.GET.q }}"
+             placeholder="Name or email…"
+             class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-bg
+                    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">Status</label>
+      <select name="status"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-bg
+                     focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+        <option value="">All statuses</option>
+        {% for value, label in filter_form.fields.status.choices %}
+          {% if value %}
+            <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">Service</label>
+      <select name="service"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-bg
+                     focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+        <option value="">All services</option>
+        {% for value, label in filter_form.fields.service.choices %}
+          {% if value %}
+            <option value="{{ value }}" {% if request.GET.service == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">Date</label>
+      <input type="date" name="date" value="{{ request.GET.date }}"
+             class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-bg
+                    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+    </div>
+
+  </div>
+  <div class="flex items-center gap-3 mt-3">
+    <button type="submit"
+            class="bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+      Filter
+    </button>
+    {% if request.GET %}
+      <a href="{% url 'dashboard:appointments' %}"
+         class="text-sm text-muted hover:text-text-base transition-colors">
+        Clear filters
+      </a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- Table -->
+{% if page_obj.object_list %}
+  <div class="bg-surface border border-border rounded-2xl overflow-hidden mb-4">
+
+    <!-- Desktop table -->
+    <div class="hidden sm:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border bg-bg/60">
+            <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Customer</th>
+            <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Service</th>
+            <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Date & time</th>
+            <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {% for appt in page_obj %}
+            <tr class="hover:bg-bg/50 transition-colors group">
+              <td class="px-5 py-3.5">
+                <p class="font-medium text-text-base">{{ appt.customer_name }}</p>
+                <p class="text-xs text-muted">{{ appt.customer_email }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style="background-color: {{ appt.service.color }}"></span>
+                  <span class="text-text-base">{{ appt.service.name }}</span>
+                </div>
+              </td>
+              <td class="px-5 py-3.5 text-text-base whitespace-nowrap">
+                {{ appt.start_datetime|date:"j M Y, H:i" }}
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
+                  {% if appt.status == 'confirmed' %}bg-success/10 text-success
+                  {% elif appt.status == 'cancelled' %}bg-danger/10 text-danger
+                  {% elif appt.status == 'pending' %}bg-warning/10 text-warning
+                  {% else %}bg-muted/10 text-muted{% endif %}">
+                  <span class="w-1.5 h-1.5 rounded-full
+                    {% if appt.status == 'confirmed' %}bg-success
+                    {% elif appt.status == 'cancelled' %}bg-danger
+                    {% elif appt.status == 'pending' %}bg-warning
+                    {% else %}bg-muted{% endif %}">
+                  </span>
+                  {{ appt.get_status_display }}
+                </span>
+              </td>
+              <td class="px-5 py-3.5 text-right">
+                <a href="{% url 'dashboard:appointment_detail' pk=appt.pk %}"
+                   class="text-xs font-semibold text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
+                  View →
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="sm:hidden divide-y divide-border">
+      {% for appt in page_obj %}
+        <a href="{% url 'dashboard:appointment_detail' pk=appt.pk %}"
+           class="flex items-start gap-3 px-4 py-4 hover:bg-bg transition-colors">
+          <div class="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
+               style="background-color: {{ appt.service.color }}"></div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-text-base text-sm truncate">{{ appt.customer_name }}</p>
+            <p class="text-xs text-muted">{{ appt.service.name }}</p>
+            <p class="text-xs text-muted mt-0.5">{{ appt.start_datetime|date:"j M Y, H:i" }}</p>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0
+            {% if appt.status == 'confirmed' %}bg-success/10 text-success
+            {% elif appt.status == 'cancelled' %}bg-danger/10 text-danger
+            {% elif appt.status == 'pending' %}bg-warning/10 text-warning
+            {% else %}bg-muted/10 text-muted{% endif %}">
+            {{ appt.get_status_display }}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- Pagination -->
+  {% if paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between">
+      <p class="text-xs text-muted">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+        of {{ total_count }} result{{ total_count|pluralize }}
+      </p>
+      <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+          <a href="?{{ filter_querystring }}&page={{ page_obj.previous_page_number }}"
+             class="px-3 py-1.5 text-xs font-medium text-muted border border-border rounded-lg hover:border-primary hover:text-primary transition-colors">
+            ← Prev
+          </a>
+        {% endif %}
+        {% for num in paginator.page_range %}
+          {% if page_obj.number == num %}
+            <span class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg">
+              {{ num }}
+            </span>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <a href="?{{ filter_querystring }}&page={{ num }}"
+               class="px-3 py-1.5 text-xs font-medium text-muted border border-border rounded-lg hover:border-primary hover:text-primary transition-colors">
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <a href="?{{ filter_querystring }}&page={{ page_obj.next_page_number }}"
+             class="px-3 py-1.5 text-xs font-medium text-muted border border-border rounded-lg hover:border-primary hover:text-primary transition-colors">
+            Next →
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="bg-surface border border-border rounded-2xl flex flex-col items-center justify-center py-20 text-center">
+    <div class="w-12 h-12 rounded-full bg-bg border border-border flex items-center justify-center mb-3">
+      <svg class="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+    </div>
+    <p class="text-sm font-medium text-text-base mb-1">No appointments found</p>
+    <p class="text-xs text-muted mb-4">
+      {% if request.GET %}Try adjusting your filters.{% else %}None have been created yet.{% endif %}
+    </p>
+    {% if request.GET %}
+      <a href="{% url 'dashboard:appointments' %}"
+         class="text-sm text-primary hover:underline">Clear filters</a>
+    {% else %}
+      <a href="{% url 'dashboard:new_booking' %}"
+         class="text-sm text-primary hover:underline">Create one →</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

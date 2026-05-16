@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Check your email — {{ business.name|default:"Vitely" }}{% endblock %}
+
+<!--
+A FALLBACK FOR THE BOOKING CONFIRMATION HTMX PARTIAL (booking_confirmation.html). 
+-->
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md text-center">
+
+    <div class="bg-surface rounded-2xl border border-border shadow-sm px-8 py-10">
+
+      <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+        <svg class="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+
+      <h1 class="text-xl font-bold text-text-base mb-2">Check your inbox</h1>
+      <p class="text-sm text-muted leading-relaxed mb-1">
+        We've sent a verification link to
+      </p>
+      <p class="text-sm font-semibold text-text-base mb-4">{{ email }}</p>
+      <p class="text-sm text-muted leading-relaxed">
+        Click the link in that email to confirm your booking.
+        Your slot is held for <span class="font-semibold text-text-base">30 minutes</span>.
+      </p>
+
+      <div class="border-t border-border mt-6 pt-6">
+        <p class="text-xs text-muted mb-1">Didn't get it? Check your spam folder.</p>
+        <p class="text-xs text-muted">
+          Wrong email?
+          <a href="{% url 'bookings:services' %}" class="text-primary hover:underline">
+            Start over
+          </a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

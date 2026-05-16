@@ -1,0 +1,31 @@
+{% comment %}
+HTMX partial: shown after a successful booking submission.
+{% endcomment %}
+
+<div class="bg-surface border border-border rounded-2xl p-5 sm:p-6">
+  <div class="flex flex-col items-center justify-center py-8 text-center">
+    <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+      <svg class="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+
+    <h2 class="text-lg sm:text-xl font-bold text-text-base mb-2">Check your inbox</h2>
+    <p class="text-sm text-muted mb-1">We've sent a verification link to</p>
+    <p class="text-sm font-semibold text-text-base mb-4">{{ email }}</p>
+    <p class="text-sm text-muted leading-relaxed mb-6">
+      Click the link in that email to confirm your booking.
+      <br>
+      <span class="font-semibold text-text-base">Your slot is held for 30 minutes</span>.
+    </p>
+
+    <div class="border-t border-border w-full pt-6 mt-4">
+      <p class="text-xs text-muted mb-2">Didn't get it? Check your spam folder.</p>
+      <p class="text-xs text-muted">
+        Wrong email?
+        <a href="{% url 'bookings:services' %}" class="text-primary hover:underline font-medium">Start over</a>
+      </p>
+    </div>
+  </div>
+</div>

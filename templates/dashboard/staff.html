@@ -1,0 +1,209 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Staff{% endblock %}
+{% block header_label %}Staff{% endblock %}
+
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-xl font-bold text-text-base">Staff</h1>
+  <p class="text-sm text-muted mt-0.5">
+    Manage your team. Staff can view and manage appointments but cannot change settings.
+  </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+
+  <!-- Left — active staff + pending invites -->
+  <div class="space-y-5">
+
+    <!-- Active staff -->
+    <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-border bg-bg/40 flex items-center justify-between">
+        <p class="text-xs font-semibold text-muted uppercase tracking-wide">Active staff</p>
+        <span class="text-xs text-muted">{{ staff_users|length }} member{{ staff_users|length|pluralize }}</span>
+      </div>
+
+      {% if staff_users %}
+        <div class="divide-y divide-border">
+          {% for member in staff_users %}
+            <div class="flex items-center gap-4 px-5 py-4">
+
+              <!-- Avatar initial -->
+              <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span class="text-sm font-bold text-primary">
+                  {{ member.email|first|upper }}
+                </span>
+              </div>
+
+              <!-- Email + role -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-text-base truncate">{{ member.email }}</p>
+                <p class="text-xs text-muted capitalize">{{ member.userprofile.role }}</p>
+              </div>
+
+              <!-- Revoke — only if not the owner themselves -->
+              {% if member != request.user %}
+                <form method="post"
+                      action="{% url 'dashboard:revoke_staff' pk=member.pk %}"
+                      onsubmit="return confirm('Revoke access for {{ member.email }}? They will be logged out immediately.')">
+                  {% csrf_token %}
+                  <button type="button"
+                          onclick="openRevokeModal('{{ member.pk }}', '{{ member.email|escapejs }}')"
+                          class="text-xs font-medium border border-danger/30 text-danger hover:bg-danger/5
+                                rounded-lg px-3 py-1.5 transition-colors">
+                    Revoke
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-xs text-muted px-3 py-1.5">You</span>
+              {% endif %}
+
+            </div>
+          {% endfor %}
+        </div>
+
+      {% else %}
+        <div class="flex flex-col items-center justify-center py-12 text-center px-6">
+          <p class="text-sm text-muted">No staff members yet.</p>
+          <p class="text-xs text-muted mt-1">Use the form to send an invite.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Pending invites -->
+    {% if pending_invites %}
+      <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-border bg-bg/40 flex items-center justify-between">
+          <p class="text-xs font-semibold text-muted uppercase tracking-wide">Pending invites</p>
+          <span class="text-xs text-muted">{{ pending_invites|length }}</span>
+        </div>
+        <div class="divide-y divide-border">
+          {% for invite in pending_invites %}
+            <div class="flex items-center gap-4 px-5 py-4">
+
+              <div class="w-9 h-9 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-text-base truncate">{{ invite.email }}</p>
+                <p class="text-xs text-muted">
+                  Sent {{ invite.created_at|timesince }} ago
+                  {% if invite.is_expired %}
+                    <span class="text-danger font-medium ml-1">· Expired</span>
+                  {% else %}
+                    · expires {{ invite.expires_at|timeuntil }}
+                  {% endif %}
+                </p>
+              </div>
+
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0
+                {% if invite.is_expired %}bg-danger/10 text-danger{% else %}bg-warning/10 text-warning{% endif %}">
+                {% if invite.is_expired %}Expired{% else %}Pending{% endif %}
+              </span>
+
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right — invite form -->
+  <div class="bg-surface border border-border rounded-2xl p-6 h-fit sticky top-6">
+
+    <h2 class="text-sm font-semibold text-text-base mb-1">Invite a staff member</h2>
+    <p class="text-xs text-muted mb-5">
+      They'll receive an email to set their password and join your team.
+      The link expires in 48 hours.
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+          Email address <span class="text-danger">*</span>
+        </label>
+        <input type="email" name="email"
+               value="{{ form.email.value|default:'' }}"
+               placeholder="staff@example.com"
+               autocomplete="off"
+               class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+        {% if form.email.errors %}
+          <p class="mt-1.5 text-xs text-danger">{{ form.email.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <button type="submit"
+              class="w-full bg-primary hover:bg-primary-dark text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">
+        Send invite
+      </button>
+
+    </form>
+
+    <div class="mt-5 pt-5 border-t border-border space-y-2 text-xs text-muted">
+      <p class="flex items-start gap-2">
+        <svg class="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Staff can view and manage all appointments but cannot edit services, availability, or settings.
+      </p>
+      <p class="flex items-start gap-2">
+        <svg class="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Sending a new invite to the same email cancels the previous one.
+      </p>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="revoke-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 px-4">
+  <div class="bg-surface border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl">
+    <h3 class="text-base font-semibold text-text-base mb-2">Revoke staff access?</h3>
+    <p class="text-sm text-muted mb-1" id="revoke-email-text"></p>
+    <p class="text-sm text-muted mb-6">They will be signed out immediately and cannot log in.</p>
+    <div class="flex gap-3">
+      <button type="button" onclick="closeRevokeModal()"
+              class="flex-1 border border-border text-muted hover:text-text-base text-sm font-medium py-2.5 rounded-xl transition-colors">
+        Cancel
+      </button>
+      <form id="revoke-form" method="post">
+        {% csrf_token %}
+        <button type="submit"
+                class="flex-1 bg-danger hover:bg-danger/80 text-white text-sm font-semibold py-2.5 px-6 rounded-xl transition-colors">
+          Revoke access
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  function openRevokeModal(pk, email) {
+    document.getElementById('revoke-form').action = `/dashboard/staff/${pk}/revoke/`;
+    document.getElementById('revoke-email-text').textContent = email;
+    document.getElementById('revoke-modal').classList.remove('hidden');
+    document.getElementById('revoke-modal').classList.add('flex');
+  }
+  function closeRevokeModal() {
+    document.getElementById('revoke-modal').classList.add('hidden');
+    document.getElementById('revoke-modal').classList.remove('flex');
+  }
+  document.getElementById('revoke-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeRevokeModal();
+  });
+</script>
+{% endblock %}
+
+{% endblock %}

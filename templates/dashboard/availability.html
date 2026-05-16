@@ -1,0 +1,157 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Availability{% endblock %}
+{% block header_label %}Availability{% endblock %}
+
+{% block content %}
+
+<div class="mb-6">
+  <h1 class="text-xl font-bold text-text-base">Weekly availability</h1>
+  <p class="text-sm text-muted mt-0.5">
+    Set your recurring weekly schedule.
+  </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+
+  <!-- Left — current schedule -->
+  <div>
+    {% if schedule %}
+      <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-border bg-bg/40">
+          <p class="text-xs font-semibold text-muted uppercase tracking-wide">Current schedule</p>
+        </div>
+        <div class="divide-y divide-border">
+          {% for slot in schedule %}
+            <div class="flex items-center gap-4 px-5 py-3.5
+                        {% if not slot.is_active %}opacity-50{% endif %}">
+
+              <!-- Day label -->
+              <div class="w-24 flex-shrink-0">
+                <p class="text-sm font-semibold text-text-base">
+                  {{ slot.get_day_of_week_display }}
+                </p>
+              </div>
+
+              <!-- Hours -->
+              <div class="flex-1 min-w-0">
+                {% if slot.is_active %}
+                  <p class="text-sm text-text-base">
+                    {{ slot.start_time|time:"H:i" }} — {{ slot.end_time|time:"H:i" }}
+                  </p>
+                {% else %}
+                  <p class="text-sm text-muted">Closed</p>
+                {% endif %}
+              </div>
+
+              <!-- Status pill -->
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0
+                {% if slot.is_active %}bg-success/10 text-success{% else %}bg-border text-muted{% endif %}">
+                {% if slot.is_active %}Open{% else %}Closed{% endif %}
+              </span>
+
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    {% else %}
+      <div class="bg-surface border border-border rounded-2xl flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-12 h-12 rounded-full bg-bg border border-border flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-text-base mb-1">No schedule set</p>
+        <p class="text-xs text-muted">Add your first availability slot using the form.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right — add/edit form -->
+  <div class="bg-surface border border-border rounded-2xl p-6 h-fit sticky top-6">
+
+    <h2 class="text-sm font-semibold text-text-base mb-5">Set a day's schedule</h2>
+    <p class="text-xs text-muted mb-5 -mt-2">
+      If you pick a day that already has a schedule, it will be updated.
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+            Day <span class="text-danger">*</span>
+          </label>
+          <select name="day_of_week"
+                  class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                         focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+            {% for value, label in day_choices %}
+              <option value="{{ value }}"
+                {% if form.day_of_week.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+          {% if form.day_of_week.errors %}
+            <p class="mt-1.5 text-xs text-danger">{{ form.day_of_week.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+              Opens at <span class="text-danger">*</span>
+            </label>
+            <input type="time" name="start_time"
+                   value="{{ form.start_time.value|default:'' }}"
+                   class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+            {% if form.start_time.errors %}
+              <p class="mt-1.5 text-xs text-danger">{{ form.start_time.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+              Closes at <span class="text-danger">*</span>
+            </label>
+            <input type="time" name="end_time"
+                   value="{{ form.end_time.value|default:'' }}"
+                   class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+            {% if form.end_time.errors %}
+              <p class="mt-1.5 text-xs text-danger">{{ form.end_time.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-sm text-danger">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="flex items-center gap-3">
+          <input type="checkbox" name="is_active" id="id_avail_active"
+                 {% if form.is_active.value != False %}checked{% endif %}
+                 class="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer">
+          <label for="id_avail_active" class="text-sm text-text-base cursor-pointer select-none">
+            Open this day
+          </label>
+        </div>
+
+      </div>
+
+      <button type="submit"
+              class="mt-6 w-full bg-primary hover:bg-primary-dark text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">
+        Save schedule
+      </button>
+
+    </form>
+  </div>
+
+</div>
+
+{% endblock %}

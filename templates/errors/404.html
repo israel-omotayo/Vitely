@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Page not found — Vitely{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-16">
+  <div class="w-full max-w-md text-center">
+
+    <p class="text-7xl font-black text-border mb-4 tracking-tight select-none">404</p>
+
+    <h1 class="text-xl font-bold text-text-base mb-2">Page not found</h1>
+    <p class="text-sm text-muted leading-relaxed mb-8">
+      The page you're looking for doesn't exist or may have been moved.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="{% url 'bookings:home' %}"
+         class="w-full sm:w-auto inline-block bg-primary hover:bg-primary-dark text-white
+                font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
+        Go home
+      </a>
+      <a href="{% url 'bookings:services' %}"
+         class="w-full sm:w-auto inline-block border border-border text-muted hover:text-text-base
+                font-medium text-sm px-6 py-2.5 rounded-xl transition-colors">
+        View services
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

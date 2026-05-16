@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Calendar{% endblock %}
+{% block header_label %}Calendar{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-5 flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 class="text-xl font-bold text-text-base">Calendar</h1>
+    <p class="text-sm text-muted mt-0.5">All upcoming confirmed appointments.</p>
+  </div>
+  <a href="{% url 'dashboard:new_booking' %}"
+     class="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    New booking
+  </a>
+</div>
+
+<div class="bg-surface border border-border rounded-2xl p-4 sm:p-6">
+  <div id="calendar"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: window.innerWidth < 640 ? 'listWeek' : 'dayGridMonth',
+      headerToolbar: {
+        left:   'prev,next today',
+        center: 'title',
+        right:  'dayGridMonth,timeGridWeek,listWeek',
+      },
+      events: {{ events_json|safe }},
+      eventClick: function(info) {
+        if (info.event.url) {
+          info.jsEvent.preventDefault();
+          window.location.href = info.event.url;
+        }
+      },
+      eventDisplay: 'block',
+      eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+      height: 'auto',
+      firstDay: 1,
+      nowIndicator: true,
+      buttonText: {
+        today:    'Today',
+        month:    'Month',
+        week:     'Week',
+        list:     'List',
+      },
+      // Style to match Vitely design tokens
+      eventDidMount: function(info) {
+        info.el.style.borderRadius = '6px';
+        info.el.style.fontSize = '0.75rem';
+        info.el.style.fontWeight = '600';
+        info.el.style.padding = '2px 6px';
+        info.el.style.cursor = 'pointer';
+      },
+    });
+    calendar.render();
+
+    // Re-render on resize so mobile/desktop view switch works
+    window.addEventListener('resize', function() {
+      var view = window.innerWidth < 640 ? 'listWeek' : 'dayGridMonth';
+      if (calendar.view.type !== view) {
+        calendar.changeView(view);
+      }
+    });
+  });
+</script>
+
+<style>
+  /* Patch FullCalendar to match Vitely colours */
+  .fc { font-family: 'Inter', system-ui, sans-serif; }
+  .fc-toolbar-title { font-size: 1rem !important; font-weight: 700 !important; color: #2C2420; }
+  .fc-button-primary {
+    background-color: #C17D5A !important;
+    border-color: #C17D5A !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    padding: 0.35rem 0.75rem !important;
+  }
+  .fc-button-primary:hover { background-color: #A0623F !important; border-color: #A0623F !important; }
+  .fc-button-primary:disabled { background-color: #EDE8E2 !important; border-color: #EDE8E2 !important; color: #9C8880 !important; }
+  .fc-button-active { background-color: #A0623F !important; }
+  .fc-daygrid-day-number { color: #2C2420; font-size: 0.8rem; }
+  .fc-col-header-cell-cushion { color: #9C8880; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .fc-day-today { background-color: #FAF7F4 !important; }
+  .fc-daygrid-dot-event:hover, .fc-daygrid-block-event:hover { filter: brightness(0.92); }
+  .fc-list-event:hover td { background: #FAF7F4 !important; cursor: pointer; }
+  .fc-theme-standard td, .fc-theme-standard th { border-color: #EDE8E2; }
+  .fc-theme-standard .fc-scrollgrid { border-color: #EDE8E2; }
+</style>
+{% endblock %}

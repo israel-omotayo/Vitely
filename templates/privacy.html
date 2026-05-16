@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy — {{ business.name|default:"Vitely" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+
+  <h1 class="text-3xl font-bold text-text-base mb-2">Privacy Policy</h1>
+  <p class="text-sm text-muted mb-10">Last updated: {% now "F Y" %}</p>
+
+  <div class="space-y-8 text-sm leading-relaxed text-text-base">
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">What We Collect</h2>
+      <p class="text-muted mb-3">When you book a service through {{ business.name|default:"Vitely" }}, we collect:</p>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li><strong class="text-text-base">Booking info:</strong> Your name, email address, and phone number (optional)</li>
+        <li><strong class="text-text-base">Appointment details:</strong> Service booked, date, time, and any notes you add</li>
+        <li><strong class="text-text-base">Usage data:</strong> IP address and browser type, used for rate limiting and security</li>
+        <li><strong class="text-text-base">Cookies:</strong> A session cookie to keep you signed in (staff only)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">How We Use It</h2>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li>To confirm and manage your bookings</li>
+        <li>To send you booking confirmations and reminders by email</li>
+        <li>To let you view or cancel your appointments</li>
+        <li>To prevent abuse and spam</li>
+      </ul>
+      <p class="text-muted mt-3">
+        <strong class="text-text-base">We do not sell your data</strong> or use it for advertising.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Third Parties</h2>
+      <p class="text-muted mb-3">Your data is shared only with services that make the platform work:</p>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li><strong class="text-text-base">Resend:</strong> Sends booking confirmation and reminder emails on our behalf</li>
+        <li><strong class="text-text-base">Supabase:</strong> Hosts the database where your booking information is stored</li>
+      </ul>
+      <p class="text-muted mt-3">
+        Each service has its own privacy policy. We don't control what they do with infrastructure-level data.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Your Rights</h2>
+      <p class="text-muted mb-3">You can:</p>
+      <ul class="list-disc list-inside space-y-1.5 text-muted">
+        <li><strong class="text-text-base">Cancel</strong> any upcoming booking via the link in your confirmation email</li>
+        <li><strong class="text-text-base">View</strong> all your bookings using the magic link sent to your email</li>
+        <li><strong class="text-text-base">Request deletion</strong> of your personal data by contacting the business directly</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Security</h2>
+      <p class="text-muted">
+        All connections use HTTPS. Passwords are hashed and never stored in plain text.
+        Login attempts are rate-limited. Booking links use unguessable UUID tokens.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Data Retention</h2>
+      <p class="text-muted">
+        Booking records are kept for business and accounting purposes.
+        If you'd like your personal information removed, contact
+        {{ business.name|default:"the business" }} directly.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Contact</h2>
+      <p class="text-muted">
+        Questions about your data? Contact
+        <strong class="text-text-base">{{ business.name|default:"the business" }}</strong> directly.
+        This platform is powered by Vitely.
+      </p>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}

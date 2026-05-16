@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vitely · {% block title %}Book your wellbeing{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  {% load static %}
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary:        "#C17D5A",
+            "primary-dark": "#A0623F",
+            bg:             "#FAF7F4",
+            surface:        "#FFFFFF",
+            border:         "#EDE8E2",
+            "text-base":    "#2C2420",
+            muted:          "#9C8880",
+            gold:           "#D4A853",
+            success:        "#5A8A6A",
+            warning:        "#C49A3A",
+            danger:         "#B85C5C",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <style>
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+      display: none;
+    }
+    input[type="password"]::-webkit-credentials-auto-fill-button,
+    input[type="password"]::-webkit-password-toggle-button {
+      display: none !important;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-bg font-sans text-text-base antialiased flex flex-col">
+
+  <!-- NAVBAR -->
+  <nav class="bg-surface border-b border-border sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <a href="{% url 'bookings:home' %}" class="flex items-center gap-2 flex-shrink-0">
+          <span class="text-xl font-bold text-primary tracking-tight">Vitely</span>
+        </a>
+
+        <div class="hidden md:flex items-center gap-4">
+          <a href="{% url 'bookings:home' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">Home</a>
+          <a href="{% url 'bookings:services' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">Services</a>
+          <a href="{% url 'bookings:my_bookings' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">My Bookings</a>
+        </div>
+
+        <button id="nav-toggle" aria-label="Toggle menu"
+                class="md:hidden p-2 rounded-lg text-muted hover:bg-border transition-colors">
+          <svg id="icon-open" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg id="icon-close" class="w-5 h-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden border-t border-border bg-surface px-4 pb-4 pt-2 space-y-1">
+      <a href="{% url 'bookings:home' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">Home</a>
+      <a href="{% url 'bookings:services' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">Services</a>
+      <a href="{% url 'bookings:my_bookings' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">My Bookings</a>
+    </div>
+  </nav>
+
+  <!-- FLASH MESSAGES -->
+  {% if messages %}
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 space-y-2">
+      {% for message in messages %}
+        <div class="flex items-start gap-3 px-4 py-3 rounded-xl border text-sm
+          {% if message.tags == 'error' %}bg-danger/10 border-danger/30 text-danger
+          {% elif message.tags == 'success' %}bg-success/10 border-success/30 text-success
+          {% elif message.tags == 'warning' %}bg-gold/10 border-gold/30 text-warning
+          {% else %}bg-primary/10 border-primary/30 text-primary{% endif %}">
+          <span class="flex-1">{{ message }}</span>
+          <button type="button" onclick="this.parentElement.remove()"
+                  class="opacity-50 hover:opacity-100 flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- MAIN CONTENT -->
+  <main class="{% block main_class %}max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 flex-1{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- FOOTER -->
+  {% block footer %}
+  {% if is_home %}
+  <!-- Rich footer (homepage only) -->
+  <footer class="bg-[#2C2420] text-white/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div class="lg:col-span-1">
+          <a href="{% url 'bookings:home' %}" class="inline-block mb-4">
+            <span class="text-xl font-bold text-white tracking-tight">Vitely</span>
+          </a>
+          <p class="text-sm text-white/50 leading-relaxed max-w-xs">
+            Simple, beautiful booking for wellness &amp; service businesses. Schedule smarter, not harder.
+          </p>
+          <div class="flex items-center gap-3 mt-6">
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary/80 flex items-center justify-center transition-colors" aria-label="Instagram">
+              <svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+              </svg>
+            </a>
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary/80 flex items-center justify-center transition-colors" aria-label="Twitter / X">
+              <svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary/80 flex items-center justify-center transition-colors" aria-label="Facebook">
+              <svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Quick Links</h4>
+          <ul class="space-y-2.5">
+            <li><a href="{% url 'bookings:home' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Home</a></li>
+            <li><a href="{% url 'bookings:services' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Our Services</a></li>
+            <li><a href="{% url 'bookings:my_bookings' %}" class="text-sm text-white/60 hover:text-primary transition-colors">My Bookings</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Support</h4>
+          <ul class="space-y-2.5">
+            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Help Centre</a></li>
+            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Cancellation Policy</a></li>
+            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Contact Us</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Get in Touch</h4>
+          <ul class="space-y-3">
+            {% if business.email %}
+            <li class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              <a href="mailto:{{ business.email }}" class="text-sm text-white/60 hover:text-primary transition-colors break-all">{{ business.email }}</a>
+            </li>
+            {% endif %}
+            {% if business.phone %}
+            <li class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              <a href="tel:{{ business.phone }}" class="text-sm text-white/60 hover:text-primary transition-colors">{{ business.phone }}</a>
+            </li>
+            {% endif %}
+            {% if business.address %}
+            <li class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <span class="text-sm text-white/60">{{ business.address }}</span>
+            </li>
+            {% endif %}
+            {% if not business.email and not business.phone and not business.address %}
+            <li class="text-sm text-white/50">Contact info coming soon.</li>
+            {% endif %}
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="border-t border-white/10">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p class="text-xs text-white/40">&copy; {% now "Y" %} {{ business.name|default:"Vitely" }}. All rights reserved.</p>
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-white/30">Powered by</span>
+            <span class="text-xs font-semibold text-primary">Vitely</span>
+          </div>
+          <div class="flex items-center justify-center gap-4 text-xs text-muted">
+            <a href="{% url 'bookings:privacy' %}" class="hover:text-primary transition-colors">Privacy Policy</a>
+            <span class="text-border">·</span>
+            <a href="{% url 'bookings:terms' %}" class="hover:text-primary transition-colors">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  {% else %}
+  <!-- Simple footer (all other pages) -->
+  <footer class="border-t border-border mt-16 py-8 text-center">
+    <p class="text-sm text-muted">
+      © {% now "Y" %} {{ business.name|default:"Vitely" }} · Powered by
+      <span class="text-primary font-semibold">Vitely</span>
+    </p>
+  </footer>
+  {% endif %}
+  {% endblock %}
+  <script>
+    (function () {
+      const toggle = document.getElementById("nav-toggle");
+      const menu   = document.getElementById("mobile-menu");
+      const open   = document.getElementById("icon-open");
+      const close  = document.getElementById("icon-close");
+      if (!toggle) return;
+      toggle.addEventListener("click", function () {
+        const expanded = menu.classList.toggle("hidden") === false;
+        open.classList.toggle("hidden", expanded);
+        close.classList.toggle("hidden", !expanded);
+      });
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

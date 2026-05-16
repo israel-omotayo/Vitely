@@ -1,0 +1,256 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block header_label %}Analytics{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page header + month nav -->
+<div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 class="text-xl font-bold text-text-base">Analytics</h1>
+    <p class="text-sm text-muted mt-0.5">Booking performance for {{ curr_label }}</p>
+  </div>
+
+  <!-- Month selector -->
+  <div class="flex items-center gap-1 bg-surface border border-border rounded-xl px-1 py-1">
+    <a href="?year={{ prev_month.year }}&month={{ prev_month.month }}"
+       class="p-2 rounded-lg text-muted hover:text-text-base hover:bg-bg transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <span class="text-sm font-semibold text-text-base px-3 min-w-[120px] text-center">
+      {{ curr_label }}
+    </span>
+    {% if can_go_next %}
+      <a href="?year={{ next_month.year }}&month={{ next_month.month }}"
+         class="p-2 rounded-lg text-muted hover:text-text-base hover:bg-bg transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
+    {% else %}
+      <span class="p-2 text-border cursor-not-allowed">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPI cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+  <!-- Bookings -->
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Bookings</p>
+    <p class="text-3xl font-bold text-text-base">{{ curr_bookings }}</p>
+    <div class="flex items-center gap-1.5 mt-2">
+      {% if booking_change is not None %}
+        <span class="inline-flex items-center gap-1 text-xs font-semibold
+          {% if booking_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {% if booking_change >= 0 %}↑{% else %}↓{% endif %}
+          {{ booking_change|floatformat:1 }}%
+        </span>
+        <span class="text-xs text-muted">vs {{ prev_label }}</span>
+      {% else %}
+        <span class="text-xs text-muted">No previous data</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Revenue -->
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Revenue</p>
+    <p class="text-3xl font-bold text-primary">₦{{ curr_revenue|floatformat:0 }}</p>
+    <div class="flex items-center gap-1.5 mt-2">
+      {% if revenue_change is not None %}
+        <span class="inline-flex items-center gap-1 text-xs font-semibold
+          {% if revenue_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {% if revenue_change >= 0 %}↑{% else %}↓{% endif %}
+          {{ revenue_change|floatformat:1 }}%
+        </span>
+        <span class="text-xs text-muted">vs {{ prev_label }}</span>
+      {% else %}
+        <span class="text-xs text-muted">No previous data</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Cancellation rate -->
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-1">Cancellation rate</p>
+    <p class="text-3xl font-bold {% if cancel_rate > 20 %}text-danger{% elif cancel_rate > 10 %}text-warning{% else %}text-text-base{% endif %}">
+      {{ cancel_rate }}%
+    </p>
+    <p class="text-xs text-muted mt-2">of all bookings this month</p>
+  </div>
+
+  <!-- Prev month revenue -->
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-1">{{ prev_label }}</p>
+    <p class="text-3xl font-bold text-muted">₦{{ prev_revenue|floatformat:0 }}</p>
+    <p class="text-xs text-muted mt-2">{{ prev_bookings }} booking{{ prev_bookings|pluralize }}</p>
+  </div>
+
+</div>
+
+<!-- Frequency polygon — daily bookings -->
+<div class="bg-surface border border-border rounded-2xl p-5 sm:p-6 mb-6">
+  <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+    <div>
+      <h2 class="text-sm font-semibold text-text-base">Daily bookings</h2>
+      <p class="text-xs text-muted mt-0.5">How many bookings came in each day</p>
+    </div>
+    <!-- Legend -->
+    <div class="flex items-center gap-4 text-xs text-muted">
+      <span class="flex items-center gap-1.5">
+        <span class="w-6 h-0.5 bg-primary rounded inline-block"></span>
+        {{ curr_label }}
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-6 h-0.5 bg-border rounded inline-block" style="border-top: 2px dashed #EDE8E2; height: 0;"></span>
+        {{ prev_label }}
+      </span>
+    </div>
+  </div>
+  <canvas id="bookingChart" height="80"></canvas>
+</div>
+
+<!-- Service breakdown -->
+{% if service_stats %}
+  <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-border bg-bg/40">
+      <p class="text-xs font-semibold text-muted uppercase tracking-wide">Services this month</p>
+    </div>
+    <div class="divide-y divide-border">
+      {% for svc in service_stats %}
+        <div class="flex items-center gap-4 px-5 py-4">
+
+          <!-- Colour dot -->
+          <div class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+               style="background-color: {{ svc.service__color }}"></div>
+
+          <!-- Name + bar -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-medium text-text-base">{{ svc.service__name }}</p>
+              <span class="text-xs text-muted ml-3 flex-shrink-0">{{ svc.count }} booking{{ svc.count|pluralize }}</span>
+            </div>
+            <!-- Proportion bar -->
+            <div class="h-1.5 bg-bg rounded-full overflow-hidden">
+              <div class="h-full rounded-full"
+                   style="width: {% if total_services %}{{ svc.count|floatformat:0 }}{% else %}0{% endif %}%;
+                          background-color: {{ svc.service__color }};
+                          width: calc({{ svc.count }} / {{ total_services }} * 100%)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Revenue -->
+          <div class="text-right flex-shrink-0">
+            <p class="text-sm font-semibold text-primary">₦{{ svc.revenue|floatformat:0 }}</p>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% else %}
+  <div class="bg-surface border border-border rounded-2xl flex flex-col items-center justify-center py-16 text-center">
+    <p class="text-sm text-muted">No bookings recorded for {{ curr_label }}.</p>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const ctx = document.getElementById('bookingChart').getContext('2d');
+
+  const currData = {{ curr_daily|safe }};
+  const prevData = {{ prev_daily|safe }};
+  const labels   = {{ days_labels|safe }};
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '{{ curr_label }}',
+          data: currData,
+          borderColor: '#C17D5A',
+          backgroundColor: 'rgba(193,125,90,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#C17D5A',
+          tension: 0.35,
+          fill: true,
+        },
+        {
+          label: '{{ prev_label }}',
+          data: prevData,
+          borderColor: '#EDE8E2',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          pointBackgroundColor: '#9C8880',
+          tension: 0.35,
+          fill: false,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          borderColor: '#EDE8E2',
+          borderWidth: 1,
+          titleColor: '#2C2420',
+          bodyColor: '#9C8880',
+          padding: 10,
+          callbacks: {
+            title: items => `Day ${items[0].label}`,
+            label: item => `${item.dataset.label}: ${item.parsed.y} booking${item.parsed.y !== 1 ? 's' : ''}`,
+          }
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            color: '#9C8880',
+            font: { size: 11 },
+          },
+          grid: { color: '#EDE8E2' },
+        },
+        x: {
+          ticks: {
+            color: '#9C8880',
+            font: { size: 11 },
+            maxTicksLimit: 15,
+          },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+});
+</script>
+{% endblock %}

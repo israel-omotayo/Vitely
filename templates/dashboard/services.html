@@ -1,0 +1,223 @@
+{% extends "dashboard/base.html" %}
+{% load humanize %}
+{% block title %}Services{% endblock %}
+{% block header_label %}Services{% endblock %}
+
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h1 class="text-xl font-bold text-text-base">Services</h1>
+    <p class="text-sm text-muted mt-0.5">Manage what customers can book.</p>
+  </div>
+  <a href="{% url 'dashboard:service_create' %}"
+     class="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    Add service
+  </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+
+  <!-- Left — service list -->
+  <div>
+    {% if services %}
+      <div class="space-y-3">
+        {% for svc in services %}
+          <div class="bg-surface border border-border rounded-2xl p-5
+                      {% if not svc.is_active %}opacity-60{% endif %}">
+            <div class="flex items-start gap-3">
+
+              <!-- Color dot + name -->
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                   style="background-color: {{ svc.color }}22">
+                <span class="w-3 h-3 rounded-full"
+                      style="background-color: {{ svc.color }}"></span>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-text-base text-sm">{{ svc.name }}</h3>
+                  {% if not svc.is_active %}
+                    <span class="text-xs font-medium text-muted bg-bg border border-border rounded-full px-2 py-0.5">
+                      Inactive
+                    </span>
+                  {% endif %}
+                </div>
+                {% if svc.description %}
+                  <p class="text-xs text-muted mt-0.5 line-clamp-1">{{ svc.description }}</p>
+                {% endif %}
+                <div class="flex items-center gap-3 mt-2 text-xs text-muted">
+                  <span>{{ svc.duration_minutes }} min</span>
+                  <span class="text-border">·</span>
+                  <span class="font-semibold text-primary">₦{{ svc.price|intcomma }}</span>
+                  <span class="text-border">·</span>
+                  <span>Capacity {{ svc.capacity }}</span>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <a href="{% url 'dashboard:service_edit' pk=svc.pk %}"
+                   class="text-xs font-medium text-muted border border-border rounded-lg px-3 py-1.5
+                          hover:text-text-base hover:border-text-base/30 transition-colors">
+                  Edit
+                </a>
+                <form method="post" action="{% url 'dashboard:service_toggle' pk=svc.pk %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="text-xs font-medium rounded-lg px-3 py-1.5 border transition-colors
+                            {% if svc.is_active %}
+                              border-danger/30 text-danger hover:bg-danger/5
+                            {% else %}
+                              border-success/30 text-success hover:bg-success/5
+                            {% endif %}">
+                    {% if svc.is_active %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="bg-surface border border-border rounded-2xl flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-12 h-12 rounded-full bg-bg border border-border flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-text-base mb-1">No services yet</p>
+        <p class="text-xs text-muted mb-4">Add your first service to start accepting bookings.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right — create / edit form -->
+  {% if action %}
+    <div class="bg-surface border border-border rounded-2xl p-6 h-fit sticky top-6">
+
+      <h2 class="text-sm font-semibold text-text-base mb-5">
+        {% if action == 'edit' %}Edit &ldquo;{{ editing.name }}&rdquo;{% else %}New service{% endif %}
+      </h2>
+
+      <form method="post"
+            action="{% if action == 'edit' %}{% url 'dashboard:service_edit' pk=editing.pk %}{% else %}{% url 'dashboard:service_create' %}{% endif %}"
+            novalidate>
+        {% csrf_token %}
+
+        <div class="space-y-4">
+
+          <div>
+            <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+              Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="name"
+                   value="{{ form.name.value|default:'' }}"
+                   placeholder="e.g. Deep Tissue Massage"
+                   class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+            {% if form.name.errors %}
+              <p class="mt-1.5 text-xs text-danger">{{ form.name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+              Description <span class="text-muted font-normal">(optional)</span>
+            </label>
+            <textarea name="description" rows="2"
+                      placeholder="Brief description…"
+                      class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                             focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                             transition-colors resize-none">{{ form.description.value|default:'' }}</textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+                Duration (min) <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="duration_minutes" min="5" step="5"
+                     value="{{ form.duration_minutes.value|default:'60' }}"
+                     class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+              {% if form.duration_minutes.errors %}
+                <p class="mt-1.5 text-xs text-danger">{{ form.duration_minutes.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+                Price (₦) <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="price" min="0" step="0.01"
+                     value="{{ form.price.value|default:'0.00' }}"
+                     class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+              {% if form.price.errors %}
+                <p class="mt-1.5 text-xs text-danger">{{ form.price.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+                Max per slot <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="capacity" min="1"
+                     value="{{ form.capacity.value|default:'1' }}"
+                     class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+              {% if form.capacity.errors %}
+                <p class="mt-1.5 text-xs text-danger">{{ form.capacity.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+                Calendar colour
+              </label>
+              <div class="flex items-center gap-2">
+                <input type="color" name="color"
+                       value="{{ form.color.value|default:'#C17D5A' }}"
+                       class="h-10 w-14 rounded-lg border border-border bg-bg cursor-pointer p-1">
+                <span class="text-xs text-muted">Pick a colour</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 pt-1">
+            <input type="checkbox" name="is_active" id="id_is_active"
+                   {% if form.is_active.value %}checked{% endif %}
+                   class="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer">
+            <label for="id_is_active" class="text-sm text-text-base cursor-pointer select-none">
+              Active (visible to customers)
+            </label>
+          </div>
+
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <a href="{% url 'dashboard:services' %}"
+             class="flex-1 text-center border border-border text-muted hover:text-text-base text-sm font-medium py-2.5 rounded-xl transition-colors">
+            Cancel
+          </a>
+          <button type="submit"
+                  class="flex-1 bg-primary hover:bg-primary-dark text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">
+            {% if action == 'edit' %}Save changes{% else %}Create service{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
