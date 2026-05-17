@@ -11,14 +11,10 @@
               overflow-x-auto whitespace-nowrap scrollbar-none">
     <a href="{% url 'bookings:home' %}"
        class="hover:text-text-base transition-colors shrink-0">Home</a>
-    <svg class="w-3 h-3 shrink-0 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-    </svg>
+    ›
     <a href="{% url 'bookings:services' %}"
        class="hover:text-text-base transition-colors shrink-0">Services</a>
-    <svg class="w-3 h-3 shrink-0 text-border" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-    </svg>
+    ›
     <span class="text-text-base font-medium truncate">{{ service.name }}</span>
   </nav>
 
