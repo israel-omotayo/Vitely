@@ -224,10 +224,10 @@ class AdminBookingForm(forms.Form):
     def __init__(self, *args, services_qs=None, **kwargs):
         super().__init__(*args, **kwargs)
         if services_qs is not None:
-            # Build choices from the queryset: (id, "Name — 60 min — ₦85")
+            # Build choices from the queryset: (id, "Name — 60 min — $85")
             self.fields["service_id"].widget.choices = [
                 ("", "Select a service…")] + [
-                (svc.id, f"{svc.name} — {svc.duration_minutes} min — ₦{svc.price}")
+                (svc.id, f"{svc.name} — {svc.duration_minutes} min — ${svc.price}")
                 for svc in services_qs]
 
     def clean_customer_email(self):

@@ -52,7 +52,7 @@
             {{ service.duration_minutes }} min
         </span>
         {% if service.price %}
-            <span class="text-base font-bold text-primary whitespace-nowrap">₦{{ service.price|intcomma }}</span>
+            <span class="text-base font-bold text-primary whitespace-nowrap">${{ service.price|intcomma }}</span>
         {% endif %}
         </div>
     </div>
