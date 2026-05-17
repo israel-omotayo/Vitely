@@ -71,29 +71,39 @@
         <div class="flex items-center gap-0.5">
           {% if can_go_prev %}
             <a href="?year={{ prev_year }}&month={{ prev_month }}"
-               class="p-2.5 rounded-lg hover:bg-bg transition-colors text-muted hover:text-text-base"
-               aria-label="Previous month">
+              class="p-2.5 rounded-lg hover:bg-bg transition-colors text-muted hover:text-text-base"
+              aria-label="Previous month">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                   stroke="currentColor" stroke-width="2">
+                  stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
             </a>
           {% else %}
             <span class="p-2.5 text-border/50 cursor-not-allowed" aria-hidden="true">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                   stroke="currentColor" stroke-width="2">
+                  stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
               </svg>
             </span>
           {% endif %}
-          <a href="?year={{ next_year }}&month={{ next_month }}"
-             class="p-2.5 rounded-lg hover:bg-bg transition-colors text-muted hover:text-text-base"
-             aria-label="Next month">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                 stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-            </svg>
-          </a>
+
+          {% if can_go_next %}                           {# ← was an unconditional <a> #}
+            <a href="?year={{ next_year }}&month={{ next_month }}"
+              class="p-2.5 rounded-lg hover:bg-bg transition-colors text-muted hover:text-text-base"
+              aria-label="Next month">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          {% else %}
+            <span class="p-2.5 text-border/50 cursor-not-allowed" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </span>
+          {% endif %}
         </div>
       </div>
 

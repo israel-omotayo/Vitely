@@ -69,8 +69,8 @@ def calendar(request):
     from django.utils import timezone
     from datetime import timedelta
     now = timezone.now()
-    window_start = now - timedelta(days=90)
-    window_end = now + timedelta(days=90)
+    window_start = now - timedelta(days=365)
+    window_end = now + timedelta(days=365)
 
     appts = Appointment.objects.select_related("service").filter(
         service__business=business,
@@ -94,6 +94,8 @@ def calendar(request):
     return render(request, "dashboard/calendar.html", {
         "events_json": json.dumps(events),
         "business": business,
+        "window_start": window_start.date().isoformat(),
+        "window_end": window_end.date().isoformat(), 
     })
 
 

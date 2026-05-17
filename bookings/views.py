@@ -112,9 +112,17 @@ def book_service(request, slug):
     year = int(request.GET.get("year", today.year))
     month = int(request.GET.get("month", today.month))
 
-    # Never show a month in the past
+    MAX_MONTHS_AHEAD = 3 
+
+    max_month = today.month + MAX_MONTHS_AHEAD
+    max_year = today.year + (max_month - 1) // 12
+    max_month = ((max_month - 1) % 12) + 1
+
+    # Clamp: never before this month, never beyond the ceiling
     if (year, month) < (today.year, today.month):
         year, month = today.year, today.month
+    elif (year, month) > (max_year, max_month):
+        year, month = max_year, max_month
 
     available_dates = services.get_available_dates(service, year, month)
 
@@ -124,6 +132,7 @@ def book_service(request, slug):
     next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
     prev_year, prev_month = (year - 1, 12) if month == 1  else (year, month - 1)
     can_go_prev = (prev_year, prev_month) >= (today.year, today.month)
+    can_go_next = (next_year, next_month) <= (max_year, max_month) 
 
     return render(request, "bookings/book.html", {
         "service": service,
@@ -139,6 +148,7 @@ def book_service(request, slug):
         "prev_year": prev_year,
         "prev_month": prev_month,
         "can_go_prev": can_go_prev,
+        "can_go_next": can_go_next, 
         "form": BookingForm(),
     })
 

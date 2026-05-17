@@ -41,6 +41,10 @@
         right:  'dayGridMonth,timeGridWeek,listWeek',
       },
       events: {{ events_json|safe }},
+      validRange: { 
+        start: '{{ window_start }}',
+        end:   '{{ window_end }}',
+      },
       eventClick: function(info) {
         if (info.event.url) {
           info.jsEvent.preventDefault();
