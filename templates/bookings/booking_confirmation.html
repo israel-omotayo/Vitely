@@ -167,7 +167,7 @@
         </button>
 
         <form method="post"
-              action="{% url 'bookings:cancel_booking' token=appointment.confirmation_token %}"
+              action="{% url 'bookings:booking_detail' token=appointment.confirmation_token %}"
               class="flex-1">
           {% csrf_token %}
           <button type="submit"

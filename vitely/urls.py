@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from core import views as core_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("foruptimerobot/health/", core_views.health, name="health"),
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path("dashboard/", include("dashboard.urls", namespace="dashboard")),
     path("", include("bookings.urls", namespace="bookings")),

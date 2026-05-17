@@ -44,6 +44,7 @@ class UserProfile(models.Model):
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
 
+        
     def __str__(self):
         return f"{self.user.email} ({self.role})"
 

@@ -2,7 +2,7 @@
 
 A production-ready Django booking platform for wellness businesses.
 
-**Live demo:** [your-app.onrender.com](https://your-app.onrender.com) *(Render Free — first load may take ~10 s after inactivity)*
+**Live demo:** [vitely.coreapp.name.ng](https://vitely.coreapp.name.ng) *(Render Free — first load may take ~10 s after inactivity)*
 
 ---
 
@@ -48,7 +48,7 @@ Request → View → DTO (schemas.py) → Service → Model → DB
 **Dashboard (owner + staff)**
 - Home — today's appointments, weekly/monthly stats, revenue chart (owner only)
 - Calendar — FullCalendar month/week/list view, colour-coded by service
-- Appointments — filterable, searchable, paginated list (25 per page)
+- Appointments — filterable, searchable, paginated list (10 per page)
 - Appointment detail — full booking info, status update
 - New booking — admin creates a confirmed booking on behalf of a customer
 - Services — create, edit, toggle active/inactive
@@ -87,7 +87,7 @@ vitely/
 ## Local Setup
 
 ```bash
-git clone https://github.com/your-username/vitely.git
+git clone https://github.com/mehmet-create/vitely.git
 cd vitely
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate

@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 def _get_business() -> BusinessProfile | None:
     return BusinessProfile.objects.select_related("owner").first()
 
+logger = logging.getLogger(__name__)
 
 #  HOME 
 
@@ -59,19 +60,24 @@ def home(request):
         "business": business,
     })
 
-from django.http import JsonResponse
-from django.db.models import Sum
-from django.db.models.functions import TruncMonth
-import json
-
 #  CALENDAR 
 
 @staff_required
 def calendar(request):
     business = _get_business()
+
+    from django.utils import timezone
+    from datetime import timedelta
+    now = timezone.now()
+    window_start = now - timedelta(days=90)
+    window_end = now + timedelta(days=90)
+
     appts = Appointment.objects.select_related("service").filter(
         service__business=business,
+        start_datetime__gte=window_start,
+        start_datetime__lte=window_end,
     ).exclude(status=Appointment.Status.CANCELLED)
+
 
     events = [
         {
@@ -404,7 +410,9 @@ def staff(request):
     else:
         form = StaffInviteForm()
 
-    staff_users = User.objects.filter(userprofile__role="staff", is_active=True)
+    staff_users = User.objects.filter(
+        userprofile__role="staff", is_active=True
+    ).select_related("userprofile").order_by("email")
     pending_invites = StaffInvite.objects.filter(accepted=False).order_by("-created_at")
 
     return render(request, "dashboard/staff.html", {

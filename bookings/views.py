@@ -403,6 +403,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
 @csrf_exempt
+@require_POST
 def cron_expire_bookings(request):
     if request.headers.get("X-Cron-Secret") != settings.CRON_SECRET:
         return HttpResponse("Forbidden", status=403)
@@ -411,6 +412,7 @@ def cron_expire_bookings(request):
     return HttpResponse("OK")
 
 @csrf_exempt
+@require_POST
 def cron_send_reminders(request):
     if request.headers.get("X-Cron-Secret") != settings.CRON_SECRET:
         return HttpResponse("Forbidden", status=403)

@@ -41,7 +41,13 @@ class Appointment(models.Model):
 
     class Meta:
         ordering = ["start_datetime"]
-
+        indexes = [
+            models.Index(fields=["service", "start_datetime"], name="appt_service_start_idx"),
+            models.Index(fields=["status", "start_datetime"], name="appt_status_start_idx"),
+            models.Index(fields=["customer_email"], name="appt_email_idx"),
+            models.Index(fields=["token_expires_at", "status", "email_verified"], name="appt_expire_idx"),
+        ]
+    
     def save(self, *args, **kwargs):
         # Auto-set end_datetime from service duration
         if not self.end_datetime:

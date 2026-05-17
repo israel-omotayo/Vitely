@@ -96,10 +96,12 @@ def get_filtered_appointments(
         qs = qs.filter(status=status)
     if service_slug:
         qs = qs.filter(service__slug=service_slug)
+    from django.db.models import Q
+
     if search:
-        qs = (
-            qs.filter(customer_name__icontains=search)
-            | qs.filter(customer_email__icontains=search)
+        qs = qs.filter(
+            Q(customer_name__icontains=search) |
+            Q(customer_email__icontains=search)
         )
     if date_str:
         qs = qs.filter(start_datetime__date=date_str)

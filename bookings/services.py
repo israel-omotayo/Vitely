@@ -385,25 +385,20 @@ def get_booking_by_lookup_token(token: str) -> Appointment:
 def expire_unverified_bookings() -> int:
     """
     Cancels pending bookings whose email verification window has lapsed.
-    Called by the expire_bookings management command (runs on a cron schedule).
-    Returns the count cancelled for logging.
-    
-    Note: This could invalidate many cache entries. Consider running during
-    off-peak hours or batch-invalidating cache by prefix if needed.
+    Uses bulk_update for efficiency — one query regardless of count.
+    Cache invalidation is skipped here intentionally: expired slots
+    were already invisible (pending = not confirmed), so no customer
+    would have seen them as available. The 60s slot cache TTL handles
+    the rest naturally.
     """
-    expired = Appointment.objects.filter(
+    expired_qs = Appointment.objects.filter(
         status=Appointment.Status.PENDING,
         email_verified=False,
         token_expires_at__lt=timezone.now(),
-    ).select_related('service')
-    
-    count = 0
-    for appt in expired:
-        appt.status = Appointment.Status.CANCELLED
-        appt.save(update_fields=["status"])
-        _invalidate_slot_cache(appt.service, appt.start_datetime)
-        count += 1
-    
+    )
+
+    count = expired_qs.update(status=Appointment.Status.CANCELLED)
+
     if count:
-        logger.info("Expired %d unverified bookings.", count)
+        logger.info("Expired %d unverified booking(s).", count)
     return count
