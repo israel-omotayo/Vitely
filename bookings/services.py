@@ -25,11 +25,6 @@ def _combine(d: date_type, t: time_type) -> datetime:
     return timezone.make_aware(datetime.combine(d, t))
 
 
-def _slot_end(start_dt: datetime, service: Service) -> datetime:
-    """Returns when a slot ends based on the service duration."""
-    return start_dt + timedelta(minutes=service.duration_minutes)
-
-
 def _overlaps_blocked(slot_start: datetime, slot_end: datetime, blocked_qs) -> bool:
     """True if the slot overlaps any blocked period."""
     for block in blocked_qs:
@@ -266,7 +261,6 @@ def create_booking(dto: CreateBookingDTO) -> Appointment:
     return appointment
 
 
-@transaction.atomic
 def confirm_booking(confirmation_token: str) -> Appointment:
     """
     Called when the customer clicks the email verify link.
@@ -286,17 +280,23 @@ def confirm_booking(confirmation_token: str) -> Appointment:
         return appt  # Already confirmed — idempotent
 
     if appt.is_expired:
-        appt.status = Appointment.Status.CANCELLED
-        appt.save(update_fields=["status"])
+        # Save cancellation in its own standalone update BEFORE raising —
+        # if this were inside @transaction.atomic, the save would roll back
+        # when the exception propagates, leaving a zombie pending booking.
+        Appointment.objects.filter(pk=appt.pk).update(
+            status=Appointment.Status.CANCELLED
+        )
+        logger.info("Expired booking cancelled: id=%s", appt.id)
         raise ServiceError("This verification link has expired. Please book again.")
 
-    appt.email_verified = True
-    appt.status = Appointment.Status.CONFIRMED
-    appt.save(update_fields=["email_verified", "status"])
+    # Only the confirmation path needs to be atomic
+    with transaction.atomic():
+        appt.email_verified = True
+        appt.status = Appointment.Status.CONFIRMED
+        appt.save(update_fields=["email_verified", "status"])
 
     logger.info("Booking confirmed: id=%s, customer=%s", appt.id, appt.customer_email)
     return appt
-
 
 @transaction.atomic
 def cancel_booking(confirmation_token: str) -> Appointment:
