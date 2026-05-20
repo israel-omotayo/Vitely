@@ -477,7 +477,7 @@ def analytics(request):
     from django.db.models import Sum
     def revenue(qs):
         r = qs.filter(
-            status__in=[Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED]
+            status__in=[Appointment.Status.COMPLETED]
         ).aggregate(t=Sum("service__price"))["t"]
         return float(r or 0)
 
