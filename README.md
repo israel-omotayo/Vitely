@@ -87,7 +87,7 @@ vitely/
 ## Local Setup
 
 ```bash
-git clone https://github.com/mehmet-create/vitely.git
+git clone https://github.com/israel-omotayo/vitely.git
 cd vitely
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
