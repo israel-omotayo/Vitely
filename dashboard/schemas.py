@@ -72,7 +72,6 @@ class ServiceDTO:
     name: str
     duration_minutes: int
     price: float
-    capacity: int
     color: str
     is_active: bool
     description: str = ""
@@ -85,8 +84,6 @@ class ServiceDTO:
             raise ValueError("Service name is required.")
         if self.duration_minutes < 5:
             raise ValueError("Duration must be at least 5 minutes.")
-        if self.capacity < 1:
-            raise ValueError("Capacity must be at least 1.")
         if float(self.price) < 0:
             raise ValueError("Price cannot be negative.")
 
@@ -106,6 +103,18 @@ class AvailabilityDTO:
     def __post_init__(self):
         if self.start_time and self.end_time and self.end_time <= self.start_time:
             raise ValueError("Close time must be after open time.")
+
+
+@dataclass
+class DailyBreakDTO:
+    start_time: object = None
+    end_time: object = None
+
+    def __post_init__(self):
+        if bool(self.start_time) != bool(self.end_time):
+            raise ValueError("Enter both break start and end times, or leave both empty.")
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValueError("Break end must be after break start.")
 
 
 #  BLOCKED TIME 

@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core.ratelimit import check_ratelimit, RateLimitError
-from dashboard.models import BusinessProfile, Service
+from dashboard.models import BusinessProfile, Service, WeeklyAvailability
 from .emails import (
     send_cancellation_email,
     send_confirmation_email,
@@ -57,10 +57,12 @@ def home(request):
     if not business:
         return redirect("accounts:setup")
 
-    services_qs = Service.objects.filter(business=business, is_active=True).order_by("name")[:3]
+    services_qs = Service.objects.filter(business=business, is_active=True).order_by("name")[:6]
+    schedule = WeeklyAvailability.objects.filter(business=business).order_by("day_of_week")
     return render(request, "bookings/home.html", {
         "business": business,
         "services": services_qs,
+        "schedule": schedule,
         'is_home': True,
     })
 

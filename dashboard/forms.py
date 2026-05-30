@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import Service, WeeklyAvailability, BlockedTime
+from .models import BusinessProfile, Service, WeeklyAvailability, BlockedTime
 
 User = get_user_model()
 
@@ -42,7 +42,6 @@ class ServiceForm(forms.ModelForm):
             "description",
             "duration_minutes",
             "price",
-            "capacity",
             "color",
             "is_active",
         ]
@@ -64,10 +63,6 @@ class ServiceForm(forms.ModelForm):
                 "step": 0.01,
                 "placeholder": "0.00",
             }),
-            "capacity": forms.NumberInput(attrs={
-                "min": 1,
-                "placeholder": "1",
-            }),
             "color": forms.TextInput(attrs={
                 "type": "color",
                 # Renders as a colour picker — browser native, no JS needed
@@ -76,7 +71,6 @@ class ServiceForm(forms.ModelForm):
         }
         labels = {
             "duration_minutes": "Duration (minutes)",
-            "capacity": "Max bookings per slot",
             "color": "Calendar colour",
             "is_active": "Active (visible to customers)",
         }
@@ -85,12 +79,6 @@ class ServiceForm(forms.ModelForm):
         val = self.cleaned_data.get("duration_minutes")
         if val is not None and val < 5:
             raise forms.ValidationError("Duration must be at least 5 minutes.")
-        return val
-
-    def clean_capacity(self):
-        val = self.cleaned_data.get("capacity")
-        if val is not None and val < 1:
-            raise forms.ValidationError("Capacity must be at least 1.")
         return val
 
     def clean_price(self):
@@ -133,6 +121,41 @@ class WeeklyAvailabilityForm(forms.ModelForm):
         end = cleaned_data.get("end_time")
         if start and end and end <= start:
             self.add_error("end_time", "Close time must be after open time.")
+        return cleaned_data
+
+
+class DailyBreakForm(forms.ModelForm):
+    class Meta:
+        model = BusinessProfile
+        fields = ["break_start_time", "break_end_time"]
+        widgets = {
+            "break_start_time": forms.TimeInput(
+                attrs={"type": "time"},
+                format="%H:%M",
+            ),
+            "break_end_time": forms.TimeInput(
+                attrs={"type": "time"},
+                format="%H:%M",
+            ),
+        }
+        labels = {
+            "break_start_time": "Break starts",
+            "break_end_time": "Break ends",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["break_start_time"].input_formats = ["%H:%M"]
+        self.fields["break_end_time"].input_formats = ["%H:%M"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get("break_start_time")
+        end = cleaned_data.get("break_end_time")
+        if bool(start) != bool(end):
+            raise forms.ValidationError("Enter both break start and end times, or leave both empty.")
+        if start and end and end <= start:
+            self.add_error("break_end_time", "Break end must be after break start.")
         return cleaned_data
 
 

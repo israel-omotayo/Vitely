@@ -33,18 +33,26 @@ def _overlaps_blocked(slot_start: datetime, slot_end: datetime, blocked_qs) -> b
     return False
 
 
-def _capacity_remaining(slot_start: datetime, slot_end: datetime, service: Service, booked_qs) -> int:
+def _overlaps_daily_break(slot_start: datetime, slot_end: datetime, business) -> bool:
+    """True if the slot overlaps the business's recurring daily break."""
+    if not business.break_start_time or not business.break_end_time:
+        return False
+    break_start = _combine(slot_start.date(), business.break_start_time)
+    break_end = _combine(slot_start.date(), business.break_end_time)
+    return slot_start < break_end and slot_end > break_start
+
+
+def _slot_is_available(slot_start: datetime, slot_end: datetime, booked_qs) -> bool:
     """
-    How many more bookings can fit in this slot.
-    Only active (non-cancelled) bookings count against capacity.
+    True when no active booking overlaps this service slot.
+    A slot is single-use: once booked or held, it is no longer available.
     """
-    overlap_count = sum(
-        1 for appt in booked_qs
-        if appt.start_datetime < slot_end
+    return not any(
+        appt.start_datetime < slot_end
         and appt.end_datetime > slot_start
         and appt.status != Appointment.Status.CANCELLED
+        for appt in booked_qs
     )
-    return service.capacity - overlap_count
 
 
 def _invalidate_slot_cache(service: Service, dt: datetime):
@@ -120,7 +128,10 @@ def _compute_available_slots(service: Service, target_date: date_type) -> list:
         if _overlaps_blocked(cursor, slot_end, blocked):
             cursor += step
             continue
-        if _capacity_remaining(cursor, slot_end, service, booked) > 0:
+        if _overlaps_daily_break(cursor, slot_end, service.business):
+            cursor += step
+            continue
+        if _slot_is_available(cursor, slot_end, booked):
             slots.append(cursor)
         cursor += step
 
@@ -208,7 +219,10 @@ def get_available_dates(service: Service, year: int, month: int) -> list[date_ty
             if _overlaps_blocked(cursor, slot_end, blocked):
                 cursor += step
                 continue
-            if _capacity_remaining(cursor, slot_end, service, booked) > 0:
+            if _overlaps_daily_break(cursor, slot_end, service.business):
+                cursor += step
+                continue
+            if _slot_is_available(cursor, slot_end, booked):
                 found = True
                 break
             cursor += step
@@ -228,12 +242,18 @@ def create_booking(dto: CreateBookingDTO) -> Appointment:
     Creates a pending appointment — slot is held but not confirmed until
     the customer verifies their email address.
 
-    Re-checks availability atomically inside the transaction to prevent
-    double-booking under load. Raises ServiceError if the slot is gone.
+    Locks the service row and re-checks availability inside the transaction
+    so simultaneous submissions cannot take the same service slot.
+    Raises ServiceError if the slot is gone.
     
     Invalidates slot cache after creating booking.
     """
-    service = Service.objects.select_related("business").get(id=dto.service_id)
+    service = (
+        Service.objects
+        .select_for_update()
+        .select_related("business")
+        .get(id=dto.service_id)
+    )
     end_dt = dto.start_datetime + timedelta(minutes=service.duration_minutes)
 
     available = _compute_available_slots(service, dto.start_datetime.date())  # Skip cache for atomicity

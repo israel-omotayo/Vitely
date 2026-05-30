@@ -30,6 +30,7 @@ from .forms import (
     StaffInviteForm,
     ServiceForm,
     WeeklyAvailabilityForm,
+    DailyBreakForm,
     BlockedTimeForm,
     AdminBookingForm,
     AppointmentFilterForm,
@@ -249,7 +250,6 @@ def service_create(request):
                     description=form.cleaned_data.get("description", ""),
                     duration_minutes=form.cleaned_data["duration_minutes"],
                     price=float(form.cleaned_data["price"]),
-                    capacity=form.cleaned_data["capacity"],
                     color=form.cleaned_data["color"],
                     is_active=form.cleaned_data["is_active"],
                 )
@@ -283,7 +283,6 @@ def service_edit(request, pk):
                     description=form.cleaned_data.get("description", ""),
                     duration_minutes=form.cleaned_data["duration_minutes"],
                     price=float(form.cleaned_data["price"]),
-                    capacity=form.cleaned_data["capacity"],
                     color=form.cleaned_data["color"],
                     is_active=form.cleaned_data["is_active"],
                 )
@@ -324,8 +323,26 @@ def availability(request):
     schedule = WeeklyAvailability.objects.filter(business=business).order_by("day_of_week")
 
     if request.method == "POST":
-        form = WeeklyAvailabilityForm(request.POST)
-        if form.is_valid():
+        action = request.POST.get("action", "schedule")
+        form = WeeklyAvailabilityForm(request.POST if action == "schedule" else None)
+        daily_break_form = DailyBreakForm(
+            request.POST if action == "daily_break" else None,
+            instance=business,
+        )
+
+        if action == "daily_break" and daily_break_form.is_valid():
+            try:
+                dto = schemas.DailyBreakDTO(
+                    start_time=daily_break_form.cleaned_data["break_start_time"],
+                    end_time=daily_break_form.cleaned_data["break_end_time"],
+                )
+                services.update_daily_break(dto, business)
+                messages.success(request, "Daily break updated.")
+                return redirect("dashboard:availability")
+            except (ServiceError, ValueError) as e:
+                messages.error(request, str(e))
+
+        elif action == "schedule" and form.is_valid():
             try:
                 dto = schemas.AvailabilityDTO(
                     day_of_week=form.cleaned_data["day_of_week"],
@@ -340,11 +357,14 @@ def availability(request):
                 messages.error(request, str(e))
     else:
         form = WeeklyAvailabilityForm()
+        daily_break_form = DailyBreakForm(instance=business)
 
     return render(request, "dashboard/availability.html", {
         "schedule": schedule,
         "form": form,
+        "daily_break_form": daily_break_form,
         "day_choices": WeeklyAvailability.DAY_CHOICES,
+        "business": business,
     })
 
 

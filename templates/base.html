@@ -35,6 +35,12 @@
     };
   </script>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>
+    document.addEventListener('submit', function(e) {
+      var btn = e.target.querySelector('[data-spinner]');
+      if (btn) btn.classList.add('btn-loading');
+    });
+  </script>
 
   <style>
     input[type="password"]::-ms-reveal,
@@ -47,6 +53,13 @@
       visibility: hidden;
       pointer-events: none;
     }
+    /* Spinner support: add this once so JS can toggle `.btn-loading` */
+    [data-spinner] .btn-spinner,
+    [data-spinner] .spinner { display: none; }
+    .btn-loading { pointer-events: none; opacity: .75; }
+    .btn-loading .btn-text { display: none; }
+    .btn-loading .btn-spinner,
+    .btn-loading .spinner { display: inline-block; }
     
   </style>
   {% block extra_head %}{% endblock %}

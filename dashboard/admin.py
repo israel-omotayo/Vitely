@@ -9,7 +9,7 @@ class BusinessProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ["name", "duration_minutes", "price", "capacity", "is_active"]
+    list_display = ["name", "duration_minutes", "price", "is_active"]
     list_editable = ["is_active"]
     prepopulated_fields = {"slug": ("name",)}
 

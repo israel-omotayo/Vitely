@@ -25,7 +25,7 @@ from .models import (
 )
 from .schemas import (
     StaffInviteDTO, AppointmentStatusUpdateDTO,
-    ServiceDTO, AvailabilityDTO, BlockedTimeDTO, AdminBookingDTO,
+    ServiceDTO, AvailabilityDTO, DailyBreakDTO, BlockedTimeDTO, AdminBookingDTO,
 )
 
 User = get_user_model()
@@ -174,7 +174,6 @@ def create_service(dto: ServiceDTO, business: BusinessProfile) -> Service:
         description=dto.description,
         duration_minutes=dto.duration_minutes,
         price=dto.price,
-        capacity=dto.capacity,
         color=dto.color,
         is_active=dto.is_active,
     )
@@ -189,7 +188,6 @@ def update_service(dto: ServiceDTO, business: BusinessProfile) -> Service:
     svc.description = dto.description
     svc.duration_minutes = dto.duration_minutes
     svc.price = dto.price
-    svc.capacity = dto.capacity
     svc.color = dto.color
     svc.is_active = dto.is_active
     svc.save()
@@ -228,6 +226,15 @@ def upsert_availability(dto: AvailabilityDTO, business: BusinessProfile) -> Week
         avail.get_day_of_week_display(), dto.start_time, dto.end_time, dto.is_active,
     )
     return avail
+
+
+@transaction.atomic
+def update_daily_break(dto: DailyBreakDTO, business: BusinessProfile) -> BusinessProfile:
+    business.break_start_time = dto.start_time
+    business.break_end_time = dto.end_time
+    business.save(update_fields=["break_start_time", "break_end_time"])
+    logger.info("Daily break updated: %s-%s", dto.start_time, dto.end_time)
+    return business
 
 
 # BLOCKED TIMES

@@ -1,6 +1,6 @@
 """
 Tests for the 5 highest-risk areas in Vitely:
-  1. Slot generation — correct slots, blocked days, lead time, capacity
+  1. Slot generation — correct slots, blocked days, lead time, booked slots
   2. Double-booking prevention — atomic check inside create_booking
   3. Cache invalidation — slot cache cleared after create/cancel
   4. Cancellation notice window — ServiceError when too late to cancel
@@ -61,14 +61,13 @@ def make_business(booking_lead_time=0, cancellation_notice_hours=0):
     )
 
 
-def make_service(business, duration_minutes=60, capacity=1, name="Massage"):
+def make_service(business, duration_minutes=60, name="Massage"):
     return Service.objects.create(
         business=business,
         name=name,
         slug=name.lower().replace(" ", "-"),
         duration_minutes=duration_minutes,
         price=5000,
-        capacity=capacity,
         is_active=True,
     )
 
@@ -175,18 +174,27 @@ class SlotGenerationTests(TestCase):
         self.assertEqual(len(slots), 1)
         self.assertEqual(slots[0].hour, 11)
 
+    def test_slots_blocked_during_daily_break(self):
+        self.business.break_start_time = time(10, 0)
+        self.business.break_end_time = time(11, 0)
+        self.business.save()
+
+        slots = _compute_available_slots(self.service, self.monday)
+        hours = [s.hour for s in slots]
+
+        self.assertEqual(hours, [9, 11])
+
     def test_30_min_service_generates_more_slots(self):
         svc = make_service(self.business, duration_minutes=30, name="Express")
         slots = _compute_available_slots(svc, self.monday)
         # 09:00–12:00 window with 30-min slots = 6 slots
         self.assertEqual(len(slots), 6)
 
-    def test_slots_at_full_capacity_not_shown(self):
-        """A slot filled to capacity should not appear in available slots."""
+    def test_booked_slots_are_not_shown(self):
+        """A slot with an active booking should not appear in available slots."""
         slots = _compute_available_slots(self.service, self.monday)
         first_slot = slots[0]
 
-        # Fill the slot to capacity (capacity=1)
         Appointment.objects.create(
             service=self.service,
             customer_name="Emeka Eze",
@@ -203,7 +211,7 @@ class SlotGenerationTests(TestCase):
         # Other slots should still be available
         self.assertEqual(len(slots_after), 2)
 
-    def test_cancelled_booking_does_not_consume_capacity(self):
+    def test_cancelled_booking_frees_slot(self):
         """A cancelled booking frees the slot back up."""
         slots = _compute_available_slots(self.service, self.monday)
         first_slot = slots[0]
@@ -230,7 +238,7 @@ class DoubleBookingTests(TestCase):
 
     def setUp(self):
         self.business = make_business(booking_lead_time=0)
-        self.service  = make_service(self.business, duration_minutes=60, capacity=1)
+        self.service  = make_service(self.business, duration_minutes=60)
         make_availability(self.business, day_of_week=0, start="09:00", end="12:00")
         self.monday = next_weekday(0)
         slots = _compute_available_slots(self.service, self.monday)
@@ -256,33 +264,6 @@ class DoubleBookingTests(TestCase):
         self.assertEqual(appt1.status, Appointment.Status.PENDING)
         self.assertEqual(appt2.status, Appointment.Status.PENDING)
 
-    def test_capacity_2_allows_two_bookings_same_slot(self):
-        self.service.capacity = 2
-        self.service.save()
-
-        dto1 = make_dto(self.service, self.first_slot, email="ada@test.com")
-        dto2 = make_dto(self.service, self.first_slot, email="emeka@test.com")
-
-        appt1 = create_booking(dto1)
-        appt2 = create_booking(dto2)
-
-        self.assertEqual(appt1.status, Appointment.Status.PENDING)
-        self.assertEqual(appt2.status, Appointment.Status.PENDING)
-
-    def test_capacity_2_blocks_third_booking_same_slot(self):
-        self.service.capacity = 2
-        self.service.save()
-
-        dto1 = make_dto(self.service, self.first_slot, email="a@test.com")
-        dto2 = make_dto(self.service, self.first_slot, email="b@test.com")
-        dto3 = make_dto(self.service, self.first_slot, email="c@test.com")
-
-        create_booking(dto1)
-        create_booking(dto2)
-
-        with self.assertRaises(ServiceError):
-            create_booking(dto3)
-
 
 # CACHE INVALIDATION
 
@@ -294,7 +275,7 @@ class CacheInvalidationTests(TestCase):
 
     def setUp(self):
         self.business = make_business(booking_lead_time=0)
-        self.service  = make_service(self.business, duration_minutes=60, capacity=2)
+        self.service  = make_service(self.business, duration_minutes=60)
         make_availability(self.business, day_of_week=0, start="09:00", end="12:00")
         self.monday = next_weekday(0)
         self.slots  = _compute_available_slots(self.service, self.monday)

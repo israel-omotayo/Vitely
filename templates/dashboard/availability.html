@@ -7,7 +7,7 @@
 <div class="mb-6">
   <h1 class="text-xl font-bold text-text-base">Weekly availability</h1>
   <p class="text-sm text-muted mt-0.5">
-    Set your recurring weekly schedule.
+    Set your recurring weekly schedule and daily break.
   </p>
 </div>
 
@@ -54,6 +54,22 @@
         </div>
       </div>
 
+      <div class="bg-surface border border-border rounded-2xl overflow-hidden mt-4">
+        <div class="px-5 py-3.5 border-b border-border bg-bg/40">
+          <p class="text-xs font-semibold text-muted uppercase tracking-wide">Daily break</p>
+        </div>
+        <div class="px-5 py-4">
+          {% if business.break_start_time and business.break_end_time %}
+            <p class="text-sm text-text-base">
+              {{ business.break_start_time|time:"H:i" }} — {{ business.break_end_time|time:"H:i" }}
+            </p>
+            <p class="text-xs text-muted mt-1">Automatically removed from every open day.</p>
+          {% else %}
+            <p class="text-sm text-muted">No recurring daily break set.</p>
+          {% endif %}
+        </div>
+      </div>
+
     {% else %}
       <div class="bg-surface border border-border rounded-2xl flex flex-col items-center justify-center py-20 text-center">
         <div class="w-12 h-12 rounded-full bg-bg border border-border flex items-center justify-center mb-3">
@@ -77,6 +93,7 @@
 
     <form method="post" novalidate>
       {% csrf_token %}
+      <input type="hidden" name="action" value="schedule">
 
       <div class="space-y-4">
 
@@ -149,6 +166,57 @@
         Save schedule
       </button>
 
+    </form>
+
+    <div class="border-t border-border my-6"></div>
+
+    <h2 class="text-sm font-semibold text-text-base mb-5">Set daily break</h2>
+    <p class="text-xs text-muted mb-5 -mt-2">
+      This break is removed automatically from every open day. Leave both times blank to clear it.
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="daily_break">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+            Break starts
+          </label>
+          <input type="time" name="break_start_time"
+                 value="{{ daily_break_form.break_start_time.value|default:'' }}"
+                 class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+          {% if daily_break_form.break_start_time.errors %}
+            <p class="mt-1.5 text-xs text-danger">{{ daily_break_form.break_start_time.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+            Break ends
+          </label>
+          <input type="time" name="break_end_time"
+                 value="{{ daily_break_form.break_end_time.value|default:'' }}"
+                 class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+          {% if daily_break_form.break_end_time.errors %}
+            <p class="mt-1.5 text-xs text-danger">{{ daily_break_form.break_end_time.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if daily_break_form.non_field_errors %}
+        <div class="mt-4 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-sm text-danger">
+          {% for error in daily_break_form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <button type="submit"
+              class="mt-6 w-full border border-border text-text-base hover:border-primary/40 hover:text-primary font-semibold text-sm py-2.5 rounded-xl transition-colors">
+        Save daily break
+      </button>
     </form>
   </div>
 

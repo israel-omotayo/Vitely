@@ -13,6 +13,8 @@ class BusinessProfile(models.Model):
     timezone = models.CharField(max_length=60, default="Africa/Lagos")
     booking_lead_time = models.IntegerField(default=60, help_text="Minutes before a slot can be booked")
     cancellation_notice_hours = models.IntegerField(default=24, help_text="Hours notice required to cancel")
+    break_start_time = models.TimeField(null=True, blank=True)
+    break_end_time = models.TimeField(null=True, blank=True)
     logo_url = models.URLField(max_length=500, blank=True, null=True)
 
     class Meta:
@@ -34,7 +36,6 @@ class Service(models.Model):
     description = models.TextField(blank=True)
     duration_minutes = models.IntegerField(default=60) 
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    capacity = models.IntegerField(default=1, help_text="Max concurrent bookings for this slot")
     color = models.CharField(max_length=7, default="#C17D5A", help_text="Hex colour for calendar display")
     is_active = models.BooleanField(default=True)
 

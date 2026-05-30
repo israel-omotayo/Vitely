@@ -5,7 +5,7 @@ from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from core.ratelimit import check_ratelimit, RateLimitError
 from .forms import (
     LoginForm,
@@ -202,6 +202,7 @@ def invite_accept_view(request, token):
             "invite": invite
         })
 
+@require_GET
 def invite_expired_view(request):
     return render(request, "accounts/invite_expired.html", status=410)
 
@@ -241,6 +242,7 @@ def password_change_view(request):
 
 
 @login_required
+@require_GET
 def password_change_done_view(request):
     """Simple confirmation page after a successful password change."""
     return render(request, "accounts/password_change_done.html")
