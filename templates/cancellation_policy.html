@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Cancellation Policy - {{ business.name|default:"Oak & Motion Clinic" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+
+  <h1 class="text-3xl font-bold text-text-base mb-2">Cancellation Policy</h1>
+  <p class="text-sm text-muted mb-10">Last updated: {% now "F Y" %}</p>
+
+  <div class="space-y-8 text-sm leading-relaxed text-text-base">
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Notice Period</h2>
+      <p class="text-muted">
+        Please cancel or reschedule at least
+        <strong class="text-text-base">{{ business.cancellation_notice_hours|default:"24" }} hours</strong>
+        before your appointment. This gives the clinic enough time to offer the slot to another patient.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">How to Cancel</h2>
+      <p class="text-muted">
+        Use the cancellation link in your confirmation email, or request your booking link from the
+        <a href="{% url 'bookings:my_bookings' %}" class="text-primary hover:underline">My Bookings</a>
+        page.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Late Cancellations</h2>
+      <p class="text-muted">
+        Late cancellations may not be accepted through the online booking system. If something urgent comes up,
+        contact the clinic as soon as possible.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Contact</h2>
+      <p class="text-muted">
+        For cancellation questions, email
+        <a href="mailto:omotayoisrael24@gmail.com" class="text-primary hover:underline">omotayoisrael24@gmail.com</a>.
+      </p>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}

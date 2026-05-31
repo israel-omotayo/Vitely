@@ -57,7 +57,7 @@ def home(request):
     if not business:
         return redirect("accounts:setup")
 
-    services_qs = Service.objects.filter(business=business, is_active=True).order_by("name")[:6]
+    services_qs = Service.objects.filter(business=business, is_active=True).order_by("name")[:3]
     schedule = WeeklyAvailability.objects.filter(business=business).order_by("day_of_week")
     return render(request, "bookings/home.html", {
         "business": business,
@@ -437,3 +437,9 @@ def privacy(request):
 
 def terms(request):
     return render(request, "terms.html")
+
+def help_centre(request):
+    return render(request, "help_centre.html")
+
+def cancellation_policy(request):
+    return render(request, "cancellation_policy.html")

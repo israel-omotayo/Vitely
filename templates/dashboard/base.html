@@ -228,6 +228,20 @@
       </div>
     {% endif %}
 
+    {% if request.session.demo_mode %}
+      <div class="px-6 pt-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">
+          <div>
+            <p class="font-semibold text-text-base">Demo owner dashboard</p>
+            <p class="mt-0.5 text-primary">You can explore every section. Saving changes is disabled for this shared demo.</p>
+          </div>
+          <a href="{% url 'bookings:home' %}" class="inline-flex items-center justify-center rounded-lg bg-surface border border-primary/25 px-3 py-2 font-semibold text-primary hover:bg-bg transition-colors">
+            View public site
+          </a>
+        </div>
+      </div>
+    {% endif %}
+
     <main class="flex-1 px-4 sm:px-6 py-6 max-w-6xl w-full mx-auto">
       {% block content %}{% endblock %}
     </main>

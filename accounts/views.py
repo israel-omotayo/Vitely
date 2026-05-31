@@ -3,7 +3,9 @@ import logging
 from django.contrib import messages
 from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import render, redirect
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from core.ratelimit import check_ratelimit, RateLimitError
@@ -17,6 +19,8 @@ from . import services, schemas
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+DEMO_EMAIL = "demo@vitely.app"
 
 
 # HELPERS 
@@ -140,6 +144,143 @@ def login_view(request):
     # "invalid" — wrong email or password. Don't reveal which.
     messages.error(request, "Invalid email or password.")
     return render(request, "accounts/login.html", {"form": form})
+
+
+@require_POST
+def demo_login_view(request):
+    """
+    One-click login for sales demos.
+    Creates a dedicated owner-level demo user if needed, seeds basic clinic data
+    when the database is empty, and marks the session read-only for dashboard POSTs.
+    """
+    user = _get_or_create_demo_owner()
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    request.session["demo_mode"] = True
+    messages.info(request, "Demo mode is on. You can explore the dashboard, but changes are disabled.")
+    return redirect("dashboard:home")
+
+
+@transaction.atomic
+def _get_or_create_demo_owner():
+    from datetime import time, timedelta
+
+    from bookings.models import Appointment
+    from dashboard.models import BusinessProfile, Service, WeeklyAvailability
+
+    user, created = User.objects.get_or_create(
+        email=DEMO_EMAIL,
+        defaults={
+            "username": DEMO_EMAIL,
+            "first_name": "Demo",
+            "last_name": "Owner",
+            "is_active": True,
+        },
+    )
+    if created:
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+
+    profile = user.userprofile
+    if profile.role != profile.Role.OWNER:
+        profile.role = profile.Role.OWNER
+        profile.save(update_fields=["role"])
+
+    business = BusinessProfile.objects.select_related("owner").first()
+    if not business:
+        business = BusinessProfile.objects.create(
+            owner=user,
+            name="Oak & Motion Clinic",
+            slug="oak-motion-clinic",
+            description=(
+                "Patient-centred care for pain relief, movement support, "
+                "and recovery, with simple online booking."
+            ),
+            booking_lead_time=60,
+            cancellation_notice_hours=24,
+            break_start_time=time(13, 0),
+            break_end_time=time(14, 0),
+        )
+
+    demo_services = [
+        {
+            "name": "Initial Consultation",
+            "description": (
+                "A first visit for new patients, including a focused assessment, "
+                "discussion of symptoms, movement checks, and a clear plan for next steps."
+            ),
+            "duration_minutes": 60,
+            "price": 85,
+            "color": "#C17D5A",
+        },
+        {
+            "name": "Physiotherapy Session",
+            "description": (
+                "Hands-on treatment and guided exercises for pain, mobility, posture, "
+                "and recovery from everyday strain or sports-related injuries."
+            ),
+            "duration_minutes": 45,
+            "price": 70,
+            "color": "#3C7A6B",
+        },
+        {
+            "name": "Deep Tissue Massage",
+            "description": (
+                "Targeted soft tissue work for tight muscles, training fatigue, "
+                "and recurring tension in the back, neck, shoulders, or legs."
+            ),
+            "duration_minutes": 50,
+            "price": 65,
+            "color": "#B5893F",
+        },
+    ]
+
+    for item in demo_services:
+        Service.objects.get_or_create(
+            business=business,
+            name=item["name"],
+            defaults=item,
+        )
+
+    if not WeeklyAvailability.objects.filter(business=business).exists():
+        for day in range(5):
+            WeeklyAvailability.objects.create(
+                business=business,
+                day_of_week=day,
+                start_time=time(9, 0),
+                end_time=time(18, 0),
+                is_active=True,
+            )
+        WeeklyAvailability.objects.create(
+            business=business,
+            day_of_week=5,
+            start_time=time(10, 0),
+            end_time=time(14, 0),
+            is_active=True,
+        )
+
+    if not Appointment.objects.filter(service__business=business).exists():
+        services_qs = list(Service.objects.filter(business=business, is_active=True)[:3])
+        names = [
+            ("Maya Johnson", "maya@example.com"),
+            ("Daniel Brooks", "daniel@example.com"),
+            ("Amara Lewis", "amara@example.com"),
+        ]
+        start = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        for index, service in enumerate(services_qs):
+            appt_start = start + timedelta(days=index, hours=index)
+            Appointment.objects.create(
+                service=service,
+                customer_name=names[index][0],
+                customer_email=names[index][1],
+                customer_phone="+234 800 000 0000",
+                start_datetime=appt_start,
+                end_datetime=appt_start + timedelta(minutes=service.duration_minutes),
+                status=Appointment.Status.CONFIRMED,
+                email_verified=True,
+                token_expires_at=timezone.now() + timedelta(days=7),
+            )
+
+    return user
 
 
 # LOGOUT 

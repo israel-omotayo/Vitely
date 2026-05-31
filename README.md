@@ -39,7 +39,7 @@ Request → View → DTO (schemas.py) → Service → Model → DB
 **Public booking flow**
 - Browse services with duration, price, and description
 - Calendar widget highlights available dates
-- HTMX slot picker — click a date, see available times without a full reload
+- HTMX slot picker — click a date, see available periods without a full reload
 - Booking form — name, email, phone, notes
 - Email verification — slot held for 30 minutes, confirmed on click
 - Magic link — customers look up their bookings by email

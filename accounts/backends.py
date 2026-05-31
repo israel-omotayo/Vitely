@@ -27,7 +27,7 @@ class VerificationAwareBackend(ModelBackend):
             return None
         
         # Check password (works for both active and inactive users)
-        if user.check_password(password) and self.user_can_authenticate(user):
+        if user.check_password(password):
             return user
         
         return None

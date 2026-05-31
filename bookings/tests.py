@@ -20,6 +20,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from bookings.models import Appointment
@@ -548,3 +549,21 @@ class ExpireBookingsTests(TestCase):
         appt.save()
         count = expire_unverified_bookings()
         self.assertEqual(count, 0)
+
+
+# PUBLIC SUPPORT PAGES
+
+class PublicSupportPageTests(TestCase):
+    def test_help_centre_page_renders(self):
+        response = self.client.get(reverse("bookings:help_centre"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Help Centre")
+        self.assertContains(response, "omotayoisrael24@gmail.com")
+
+    def test_cancellation_policy_page_renders(self):
+        response = self.client.get(reverse("bookings:cancellation_policy"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cancellation Policy")
+        self.assertContains(response, "24 hours")

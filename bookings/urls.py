@@ -28,4 +28,6 @@ urlpatterns = [
     # Legal pages
     path("privacy/", views.privacy, name="privacy"),
     path("terms/", views.terms, name="terms"),
+    path("help-centre/", views.help_centre, name="help_centre"),
+    path("cancellation-policy/", views.cancellation_policy, name="cancellation_policy"),
 ]

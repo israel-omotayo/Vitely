@@ -77,6 +77,7 @@
 
         <div class="hidden md:flex items-center gap-4">
           <a href="{% url 'bookings:home' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">Home</a>
+          <a href="{% url 'bookings:home' %}#about" class="text-sm font-medium text-muted hover:text-text-base transition-colors">About</a>
           <a href="{% url 'bookings:services' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">Services</a>
           <a href="{% url 'bookings:my_bookings' %}" class="text-sm font-medium text-muted hover:text-text-base transition-colors">My Bookings</a>
         </div>
@@ -95,6 +96,7 @@
 
     <div id="mobile-menu" class="hidden md:hidden border-t border-border bg-surface px-4 pb-4 pt-2 space-y-1">
       <a href="{% url 'bookings:home' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">Home</a>
+      <a href="{% url 'bookings:home' %}#about" class="block py-2 text-sm font-medium text-text-base hover:text-primary">About</a>
       <a href="{% url 'bookings:services' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">Services</a>
       <a href="{% url 'bookings:my_bookings' %}" class="block py-2 text-sm font-medium text-text-base hover:text-primary">My Bookings</a>
     </div>
@@ -164,6 +166,7 @@
           <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Quick Links</h4>
           <ul class="space-y-2.5">
             <li><a href="{% url 'bookings:home' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Home</a></li>
+            <li><a href="{% url 'bookings:home' %}#about" class="text-sm text-white/60 hover:text-primary transition-colors">About</a></li>
             <li><a href="{% url 'bookings:services' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Our Services</a></li>
             <li><a href="{% url 'bookings:my_bookings' %}" class="text-sm text-white/60 hover:text-primary transition-colors">My Bookings</a></li>
           </ul>
@@ -172,23 +175,21 @@
         <div>
           <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Support</h4>
           <ul class="space-y-2.5">
-            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Help Centre</a></li>
-            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Cancellation Policy</a></li>
-            <li><a href="#" class="text-sm text-white/60 hover:text-primary transition-colors">Contact Us</a></li>
+            <li><a href="{% url 'bookings:help_centre' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Help Centre</a></li>
+            <li><a href="{% url 'bookings:cancellation_policy' %}" class="text-sm text-white/60 hover:text-primary transition-colors">Cancellation Policy</a></li>
+            <li><a href="mailto:omotayoisrael24@gmail.com" class="text-sm text-white/60 hover:text-primary transition-colors">Contact Us</a></li>
           </ul>
         </div>
 
         <div>
           <h4 class="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Get in Touch</h4>
           <ul class="space-y-3">
-            {% if business.email %}
             <li class="flex items-start gap-2.5">
               <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
               </svg>
-              <a href="mailto:{{ business.email }}" class="text-sm text-white/60 hover:text-primary transition-colors break-all">{{ business.email }}</a>
+              <a href="mailto:omotayoisrael24@gmail.com" class="text-sm text-white/60 hover:text-primary transition-colors break-all">omotayoisrael24@gmail.com</a>
             </li>
-            {% endif %}
             {% if business.phone %}
             <li class="flex items-start gap-2.5">
               <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -197,18 +198,13 @@
               <a href="tel:{{ business.phone }}" class="text-sm text-white/60 hover:text-primary transition-colors">{{ business.phone }}</a>
             </li>
             {% endif %}
-            {% if business.address %}
             <li class="flex items-start gap-2.5">
               <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
-              <span class="text-sm text-white/60">{{ business.address }}</span>
+              <span class="text-sm text-white/60">18 Willow Lane, Lekki Phase 1, Lagos, Nigeria</span>
             </li>
-            {% endif %}
-            {% if not business.email and not business.phone and not business.address %}
-            <li class="text-sm text-white/50">Contact info coming soon.</li>
-            {% endif %}
           </ul>
         </div>
 

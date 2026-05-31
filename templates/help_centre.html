@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Help Centre - {{ business.name|default:"Oak & Motion Clinic" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+
+  <h1 class="text-3xl font-bold text-text-base mb-2">Help Centre</h1>
+  <p class="text-sm text-muted mb-10">Quick answers for booking and managing your appointment.</p>
+
+  <div class="space-y-8 text-sm leading-relaxed text-text-base">
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Booking an Appointment</h2>
+      <p class="text-muted">
+        Choose a service, select an available date and time, then enter your contact details.
+        A verification link will be sent to your email before the booking is confirmed.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Confirmation Emails</h2>
+      <p class="text-muted">
+        If you do not see your confirmation email, check your spam or promotions folder.
+        Make sure you entered the correct email address when booking.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Viewing Your Bookings</h2>
+      <p class="text-muted">
+        Use the <a href="{% url 'bookings:my_bookings' %}" class="text-primary hover:underline">My Bookings</a>
+        page to request a secure link for appointments connected to your email address.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-semibold text-text-base mb-3">Need Help?</h2>
+      <p class="text-muted">
+        Contact us at
+        <a href="mailto:omotayoisrael24@gmail.com" class="text-primary hover:underline">omotayoisrael24@gmail.com</a>
+        and include your name, appointment date, and service if available.
+      </p>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}
