@@ -1,6 +1,6 @@
 # Vitely
 
-A production-ready Django booking platform for wellness businesses.
+A production-ready Django booking system for a single wellness business, with services, availability, staff access, and appointment management built in.
 
 **Live demo:** [vitely.coreapp.name.ng](https://vitely.coreapp.name.ng) *(Render Free — first load may take ~10 s after inactivity)*
 
