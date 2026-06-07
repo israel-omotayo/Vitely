@@ -45,6 +45,26 @@
         {% endif %}
       </div>
 
+      <!-- Practitioner -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+          Practitioner
+        </label>
+        <select name="practitioner_id"
+                class="w-full px-3 py-2.5 text-sm border border-border rounded-xl bg-bg
+                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+          {% for value, label in form.fields.practitioner_id.widget.choices %}
+            <option value="{{ value }}"
+              {% if form.practitioner_id.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if form.practitioner_id.errors %}
+          <p class="mt-1.5 text-xs text-danger">{{ form.practitioner_id.errors.0 }}</p>
+        {% endif %}
+      </div>
+
       <!-- Date & time -->
       <div class="mb-4">
         <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">

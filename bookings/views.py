@@ -4,7 +4,10 @@ All admin/dashboard views live in dashboard/views.py.
 """
 
 import logging
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
 
 from django.contrib import messages
 from django.http import HttpResponse
@@ -44,6 +47,18 @@ def _get_client_ip(request):
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _schedule_manage_command(command_name: str):
+    project_root = Path(__file__).resolve().parents[1]
+    manage_py = project_root / "manage.py"
+    subprocess.Popen(
+        [sys.executable, str(manage_py), command_name],
+        cwd=str(project_root),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        close_fds=True,
+    )
 
 
 # HOME
@@ -419,8 +434,7 @@ from django.conf import settings
 def cron_expire_bookings(request):
     if request.headers.get("X-Cron-Secret") != settings.CRON_SECRET:
         return HttpResponse("Forbidden", status=403)
-    from bookings.management.commands.expire_bookings import Command
-    Command().handle()
+    _schedule_manage_command("expire_bookings")
     return HttpResponse("OK")
 
 @csrf_exempt
@@ -428,8 +442,7 @@ def cron_expire_bookings(request):
 def cron_send_reminders(request):
     if request.headers.get("X-Cron-Secret") != settings.CRON_SECRET:
         return HttpResponse("Forbidden", status=403)
-    from bookings.management.commands.send_reminders import Command
-    Command().handle()
+    _schedule_manage_command("send_reminders")
     return HttpResponse("OK")
 
 def privacy(request):

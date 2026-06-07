@@ -28,6 +28,7 @@ class CreateBookingDTO:
     customer_email: str
     customer_phone: str = ""
     notes: str = ""
+    practitioner_id: int | None = None
 
     def __post_init__(self):
         self.customer_name = self.customer_name.strip()

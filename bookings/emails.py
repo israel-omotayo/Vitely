@@ -195,16 +195,21 @@ def send_reminder_email(appointment: Appointment, request=None) -> None:
 
 # Staff invite email
 
-def send_staff_invite_email(invite: StaffInvite, business_name: str, request=None) -> None:
+def send_staff_invite_email(
+    invite: StaffInvite,
+    business_name: str,
+    request=None,
+    accept_url: str = "",
+) -> None:
     accept_path = reverse("accounts:invite_accept", kwargs={"token": str(invite.token)})
-    accept_url = _absolute_url(accept_path, request)
+    accept_url = accept_url or _absolute_url(accept_path, request)
 
     html = build_vitely_email(
         heading=f"You're invited to join {business_name} on Vitely",
         message=(
             f"{invite.invited_by.get_full_name() or invite.invited_by.username} has invited you "
             f"to join the <strong>{business_name}</strong> team on Vitely as a staff member. "
-            "Click below to accept — this link expires in 7 days."
+            "Click below to accept — this link expires in 48 hours."
         ),
         action_content=f'<a href="{accept_url}" class="btn">Accept invitation</a>',
         notice="If you weren't expecting this, you can safely ignore it.",

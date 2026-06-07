@@ -1,5 +1,9 @@
 from django import forms
+from django.contrib.auth.forms import PasswordResetForm as DjangoPasswordResetForm
 from django.contrib.auth.password_validation import validate_password
+from django.template import loader
+
+from core.utils import send_email_async
 
 
 
@@ -95,3 +99,28 @@ class PasswordChangeForm(forms.Form):
         if p1 and p2 and p1 != p2:
             self.add_error("confirm_password", "Passwords do not match.")
         return cleaned
+
+
+class AsyncPasswordResetForm(DjangoPasswordResetForm):
+    def send_mail(
+        self,
+        subject_template_name,
+        email_template_name,
+        context,
+        from_email,
+        to_email,
+        html_email_template_name=None,
+    ):
+        subject = loader.render_to_string(subject_template_name, context)
+        subject = "".join(subject.splitlines())
+        if html_email_template_name:
+            html_content = loader.render_to_string(html_email_template_name, context)
+        else:
+            html_content = loader.render_to_string(email_template_name, context)
+
+        send_email_async(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            context="password-reset",
+        )

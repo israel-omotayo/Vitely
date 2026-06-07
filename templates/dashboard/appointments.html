@@ -98,6 +98,7 @@
           <tr class="border-b border-border bg-bg/60">
             <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Customer</th>
             <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Service</th>
+            <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Practitioner</th>
             <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Date & time</th>
             <th class="text-left text-xs font-semibold text-muted uppercase tracking-wide px-5 py-3">Status</th>
             <th class="px-5 py-3"></th>
@@ -116,6 +117,13 @@
                         style="background-color: {{ appt.service.color }}"></span>
                   <span class="text-text-base">{{ appt.service.name }}</span>
                 </div>
+              </td>
+              <td class="px-5 py-3.5 text-text-base whitespace-nowrap">
+                {% if appt.practitioner %}
+                  {{ appt.practitioner.get_full_name|default:appt.practitioner.email|default:appt.practitioner.username }}
+                {% else %}
+                  <span class="text-muted">Auto</span>
+                {% endif %}
               </td>
               <td class="px-5 py-3.5 text-text-base whitespace-nowrap">
                 {{ appt.start_datetime|date:"j M Y, H:i" }}
@@ -157,6 +165,9 @@
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-text-base text-sm truncate">{{ appt.customer_name }}</p>
             <p class="text-xs text-muted">{{ appt.service.name }}</p>
+            {% if appt.practitioner %}
+              <p class="text-xs text-muted">{{ appt.practitioner.get_full_name|default:appt.practitioner.email|default:appt.practitioner.username }}</p>
+            {% endif %}
             <p class="text-xs text-muted mt-0.5">{{ appt.start_datetime|date:"j M Y, H:i" }}</p>
           </div>
           <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0

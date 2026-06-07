@@ -12,11 +12,12 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from bookings.models import Appointment
-from bookings.services import ServiceError # single exception class
-from core.utils import build_vitely_email, send_email_async
+from bookings.services import ServiceError, invalidate_slot_cache_for_range # single exception class
+from bookings.emails import send_staff_invite_email
 from accounts.models import UserProfile
 
 from .models import (
@@ -39,7 +40,7 @@ INVITE_EXPIRY_HOURS = 48
 def get_today_appointments(business: BusinessProfile) -> list:
     today = timezone.localdate()
     return list(
-        Appointment.objects.select_related("service")
+        Appointment.objects.select_related("service", "practitioner")
         .filter(service__business=business, start_datetime__date=today)
         .exclude(status=Appointment.Status.CANCELLED)
         .order_by("start_datetime")
@@ -89,7 +90,7 @@ def get_filtered_appointments(
 
     Returns the queryset directly.
     """
-    qs = Appointment.objects.select_related("service").filter(
+    qs = Appointment.objects.select_related("service", "practitioner").filter(
         service__business=business
     )
     if status:
@@ -149,6 +150,7 @@ def create_admin_booking(dto: AdminBookingDTO) -> Appointment:
         customer_email=dto.customer_email,
         customer_phone=dto.customer_phone,
         notes=dto.notes,
+        practitioner_id=dto.practitioner_id,
     )
     appointment = create_booking(booking_dto)
 
@@ -177,6 +179,7 @@ def create_service(dto: ServiceDTO, business: BusinessProfile) -> Service:
         color=dto.color,
         is_active=dto.is_active,
     )
+    svc.practitioners.set(_valid_practitioners(dto.practitioner_ids))
     logger.info("Service '%s' created (id=%s)", svc.name, svc.id)
     return svc
 
@@ -191,8 +194,16 @@ def update_service(dto: ServiceDTO, business: BusinessProfile) -> Service:
     svc.color = dto.color
     svc.is_active = dto.is_active
     svc.save()
+    svc.practitioners.set(_valid_practitioners(dto.practitioner_ids))
+    _invalidate_service_months(svc)
     logger.info("Service '%s' updated (id=%s)", svc.name, svc.id)
     return svc
+
+
+def _invalidate_service_months(service: Service):
+    start = timezone.now()
+    end = start + timedelta(days=120)
+    invalidate_slot_cache_for_range(service, start, end)
 
 
 @transaction.atomic
@@ -237,24 +248,90 @@ def update_daily_break(dto: DailyBreakDTO, business: BusinessProfile) -> Busines
     return business
 
 
+# PRACTITIONERS
+
+def _valid_practitioners(ids=None):
+    ids = ids or []
+    return User.objects.filter(
+        id__in=ids,
+        is_active=True,
+        userprofile__role__in=["owner", "staff"],
+    )
+
+
+def get_practitioners():
+    return User.objects.filter(
+        is_active=True,
+        userprofile__role__in=["owner", "staff"],
+    ).select_related("userprofile").order_by("first_name", "email", "username")
+
+
 # BLOCKED TIMES
+
+def get_block_conflicts(dto: BlockedTimeDTO, business: BusinessProfile):
+    qs = Appointment.objects.select_related("service", "practitioner").filter(
+        service__business=business,
+        start_datetime__lt=dto.end_datetime,
+        end_datetime__gt=dto.start_datetime,
+    ).exclude(status=Appointment.Status.CANCELLED)
+    if dto.practitioner_id:
+        qs = qs.filter(Q(practitioner_id=dto.practitioner_id) | Q(practitioner__isnull=True))
+    return qs.order_by("start_datetime")
+
+
+def attach_block_conflicts(blocked_times: list[BlockedTime], business: BusinessProfile) -> list[BlockedTime]:
+    if not blocked_times:
+        return blocked_times
+
+    window_start = min(block.start_datetime for block in blocked_times)
+    window_end = max(block.end_datetime for block in blocked_times)
+    appointments = list(
+        Appointment.objects.select_related("service", "practitioner")
+        .filter(
+            service__business=business,
+            start_datetime__lt=window_end,
+            end_datetime__gt=window_start,
+        )
+        .exclude(status=Appointment.Status.CANCELLED)
+        .order_by("start_datetime")
+    )
+
+    for block in blocked_times:
+        block.conflicting_appointments = [
+            appt
+            for appt in appointments
+            if appt.start_datetime < block.end_datetime
+            and appt.end_datetime > block.start_datetime
+            and (
+                block.practitioner_id is None
+                or appt.practitioner_id in (None, block.practitioner_id)
+            )
+        ]
+    return blocked_times
 
 @transaction.atomic
 def add_blocked_time(dto: BlockedTimeDTO, business: BusinessProfile) -> BlockedTime:
     bt = BlockedTime.objects.create(
         business=business,
+        practitioner_id=dto.practitioner_id,
         start_datetime=dto.start_datetime,
         end_datetime=dto.end_datetime,
         reason=dto.reason,
     )
     logger.info("Blocked time added: %s → %s", dto.start_datetime, dto.end_datetime)
+    for svc in Service.objects.filter(business=business, is_active=True):
+        invalidate_slot_cache_for_range(svc, dto.start_datetime, dto.end_datetime)
     return bt
 
 
 @transaction.atomic
 def delete_blocked_time(pk: int, business: BusinessProfile) -> None:
     bt = BlockedTime.objects.get(pk=pk, business=business)
+    start_dt = bt.start_datetime
+    end_dt = bt.end_datetime
     bt.delete()
+    for svc in Service.objects.filter(business=business, is_active=True):
+        invalidate_slot_cache_for_range(svc, start_dt, end_dt)
     logger.info("Blocked time deleted: id=%s", pk)
 
 
@@ -278,23 +355,14 @@ def send_staff_invite(dto: StaffInviteDTO, site_url: str) -> StaffInvite:
         expires_at=timezone.now() + timedelta(hours=INVITE_EXPIRY_HOURS),
     )
 
+    business = BusinessProfile.objects.first()
     invite_url = f"{site_url}/accounts/invite/{invite.token}/"
-
-    html = build_vitely_email(
-        heading="You've been invited to Vitely",
-        message=(
-            "You've been invited to manage bookings as a staff member. "
-            f"Click below to set up your account — this link expires in {INVITE_EXPIRY_HOURS} hours."
-        ),
-        action_content=f'<a href="{invite_url}" class="btn">Accept invitation</a>',
-        notice="If you weren't expecting this, you can safely ignore it.",
-    )
-
-    send_email_async(
-        to_email=dto.email,
-        subject="You've been invited to manage Vitely bookings",
-        html_content=html,
-        context=f"staff-invite-{invite.id}",
+    transaction.on_commit(
+        lambda: send_staff_invite_email(
+            invite,
+            business.name if business else "Vitely",
+            accept_url=invite_url,
+        )
     )
 
     logger.info("Staff invite sent to %s by user_id=%s", dto.email, dto.invited_by_id)

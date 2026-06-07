@@ -31,6 +31,12 @@ class BusinessProfile(models.Model):
 
 class Service(models.Model):
     business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="services")
+    practitioners = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="bookable_services",
+        help_text="Staff or owners who can perform this service. Leave empty to allow any active practitioner.",
+    )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
@@ -76,6 +82,14 @@ class WeeklyAvailability(models.Model):
 
 class BlockedTime(models.Model):
     business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="blocked_times")
+    practitioner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="blocked_times",
+        null=True,
+        blank=True,
+        help_text="Leave empty to block the whole business.",
+    )
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     reason = models.CharField(max_length=200, blank=True)

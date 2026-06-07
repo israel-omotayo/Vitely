@@ -75,6 +75,7 @@ class ServiceDTO:
     color: str
     is_active: bool
     description: str = ""
+    practitioner_ids: list[int] = None
     pk: int = None           # None = create, int = update
 
     def __post_init__(self):
@@ -86,6 +87,7 @@ class ServiceDTO:
             raise ValueError("Duration must be at least 5 minutes.")
         if float(self.price) < 0:
             raise ValueError("Price cannot be negative.")
+        self.practitioner_ids = self.practitioner_ids or []
 
 
 #  WEEKLY AVAILABILITY 
@@ -126,6 +128,7 @@ class BlockedTimeDTO:
     start_datetime: datetime
     end_datetime: datetime
     reason: str = ""
+    practitioner_id: int | None = None
 
     def __post_init__(self):
         self.reason = self.reason.strip()
@@ -147,6 +150,7 @@ class AdminBookingDTO:
     customer_email: str
     customer_phone: str = ""
     notes: str = ""
+    practitioner_id: int | None = None
 
     def __post_init__(self):
         self.customer_name = self.customer_name.strip()

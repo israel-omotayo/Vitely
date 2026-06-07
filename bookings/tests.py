@@ -265,6 +265,12 @@ class DoubleBookingTests(TestCase):
         self.assertEqual(appt1.status, Appointment.Status.PENDING)
         self.assertEqual(appt2.status, Appointment.Status.PENDING)
 
+    def test_off_grid_booking_time_raises_service_error(self):
+        off_grid_slot = self.first_slot + timedelta(minutes=15)
+
+        with self.assertRaises(ServiceError):
+            create_booking(make_dto(self.service, off_grid_slot))
+
 
 # CACHE INVALIDATION
 

@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 from dashboard.models import Service
@@ -15,6 +16,13 @@ class Appointment(models.Model):
         NO_SHOW = "no_show", "No Show"
 
     service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="appointments")
+    practitioner = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="appointments",
+        null=True,
+        blank=True,
+    )
 
     # Customer details — guest booking, no account
     customer_name = models.CharField(max_length=200)
@@ -43,6 +51,7 @@ class Appointment(models.Model):
         ordering = ["start_datetime"]
         indexes = [
             models.Index(fields=["service", "start_datetime"], name="appt_service_start_idx"),
+            models.Index(fields=["practitioner", "start_datetime"], name="appt_pract_start_idx"),
             models.Index(fields=["status", "start_datetime"], name="appt_status_start_idx"),
             models.Index(fields=["customer_email"], name="appt_email_idx"),
             models.Index(fields=["token_expires_at", "status", "email_verified"], name="appt_expire_idx"),

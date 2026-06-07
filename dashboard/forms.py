@@ -35,6 +35,14 @@ class StaffInviteForm(forms.Form):
 # slug is excluded — auto-generated in Service.save().
 
 class ServiceForm(forms.ModelForm):
+    practitioners = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Practitioners",
+        help_text="Leave empty to allow any active practitioner.",
+    )
+
     class Meta:
         model = Service
         fields = [
@@ -44,6 +52,7 @@ class ServiceForm(forms.ModelForm):
             "price",
             "color",
             "is_active",
+            "practitioners",
         ]
         widgets = {
             "name": forms.TextInput(attrs={
@@ -74,6 +83,11 @@ class ServiceForm(forms.ModelForm):
             "color": "Calendar colour",
             "is_active": "Active (visible to customers)",
         }
+
+    def __init__(self, *args, practitioners_qs=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if practitioners_qs is not None:
+            self.fields["practitioners"].queryset = practitioners_qs
 
     def clean_duration_minutes(self):
         val = self.cleaned_data.get("duration_minutes")
@@ -164,9 +178,16 @@ class DailyBreakForm(forms.ModelForm):
 # business is set in the view.
 
 class BlockedTimeForm(forms.ModelForm):
+    practitioner = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        empty_label="Everyone",
+        label="Applies to",
+    )
+
     class Meta:
         model = BlockedTime
-        fields = ["start_datetime", "end_datetime", "reason"]
+        fields = ["practitioner", "start_datetime", "end_datetime", "reason"]
         widgets = {
             "start_datetime": forms.DateTimeInput(
                 attrs={"type": "datetime-local"},
@@ -181,13 +202,16 @@ class BlockedTimeForm(forms.ModelForm):
             }),
         }
         labels = {
+            "practitioner": "Applies to",
             "start_datetime": "Block from",
             "end_datetime": "Block until",
             "reason": "Reason (optional)",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, practitioners_qs=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if practitioners_qs is not None:
+            self.fields["practitioner"].queryset = practitioners_qs
         # HTML datetime-local needs this exact input format
         self.fields["start_datetime"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["end_datetime"].input_formats = ["%Y-%m-%dT%H:%M"]
@@ -220,6 +244,11 @@ class AdminBookingForm(forms.Form):
         input_formats=["%Y-%m-%dT%H:%M"],
         label="Date & Time",
     )
+    practitioner_id = forms.IntegerField(
+        required=False,
+        widget=forms.Select(),
+        label="Practitioner",
+    )
     customer_name = forms.CharField(
         max_length=200,
         widget=forms.TextInput(attrs={"placeholder": "Customer full name"}),
@@ -244,7 +273,7 @@ class AdminBookingForm(forms.Form):
         label="Notes (optional)",
     )
 
-    def __init__(self, *args, services_qs=None, **kwargs):
+    def __init__(self, *args, services_qs=None, practitioners_qs=None, **kwargs):
         super().__init__(*args, **kwargs)
         if services_qs is not None:
             # Build choices from the queryset: (id, "Name — 60 min — $85")
@@ -252,6 +281,13 @@ class AdminBookingForm(forms.Form):
                 ("", "Select a service…")] + [
                 (svc.id, f"{svc.name} — {svc.duration_minutes} min — ${svc.price}")
                 for svc in services_qs]
+        if practitioners_qs is not None:
+            self.fields["practitioner_id"].widget.choices = [
+                ("", "Auto-assign")
+            ] + [
+                (user.id, user.get_full_name() or user.email or user.username)
+                for user in practitioners_qs
+            ]
 
     def clean_customer_email(self):
         return self.cleaned_data.get("customer_email", "").strip().lower()

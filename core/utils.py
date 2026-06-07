@@ -62,6 +62,10 @@ def send_email(to_email: str, subject: str, html_content: str) -> None:
 
 
 def send_email_async(to_email: str, subject: str, html_content: str, context: str = "") -> None:
+    if getattr(settings, "EMAIL_BACKEND", "") == "django.core.mail.backends.console.EmailBackend":
+        send_email(to_email, subject, html_content)
+        return
+
     def _send():
         try:
             send_email(to_email, subject, html_content)

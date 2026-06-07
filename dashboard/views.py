@@ -20,6 +20,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from bookings.models import Appointment
 from bookings.services import ServiceError
@@ -48,7 +49,6 @@ logger = logging.getLogger(__name__)
 def _get_business() -> BusinessProfile | None:
     return BusinessProfile.objects.select_related("owner").first()
 
-logger = logging.getLogger(__name__)
 
 #  HOME 
 
@@ -73,7 +73,7 @@ def calendar(request):
     window_start = now - timedelta(days=365)
     window_end = now + timedelta(days=365)
 
-    appts = Appointment.objects.select_related("service").filter(
+    appts = Appointment.objects.select_related("service", "practitioner").filter(
         service__business=business,
         start_datetime__gte=window_start,
         start_datetime__lte=window_end,
@@ -83,7 +83,10 @@ def calendar(request):
     events = [
         {
             "id": appt.id,
-            "title": f"{appt.customer_name} — {appt.service.name}",
+            "title": f"{appt.customer_name} — {appt.service.name}" + (
+                f" with {appt.practitioner.get_full_name() or appt.practitioner.email or appt.practitioner.username}"
+                if appt.practitioner_id else ""
+            ),
             "start": appt.start_datetime.isoformat(),
             "end": appt.end_datetime.isoformat(),
             "color": appt.service.color,
@@ -104,6 +107,7 @@ def calendar(request):
 #  APPOINTMENTS 
 
 APPOINTMENTS_PER_PAGE = 10
+BLOCKED_TIMES_PER_PAGE = 10
 
 @staff_required
 def appointments(request):
@@ -133,8 +137,6 @@ def appointments(request):
         search=dto.search,
         date_str=dto.date_str,
     )
-
-    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     paginator = Paginator(appts_qs, APPOINTMENTS_PER_PAGE)
     page_number = request.GET.get("page")
@@ -199,9 +201,10 @@ def update_appointment(request, pk):
 def new_booking(request):
     business = _get_business()
     services_qs = Service.objects.filter(business=business, is_active=True)
+    practitioners_qs = services.get_practitioners()
 
     if request.method == "POST":
-        form = AdminBookingForm(request.POST, services_qs=services_qs)
+        form = AdminBookingForm(request.POST, services_qs=services_qs, practitioners_qs=practitioners_qs)
         if form.is_valid():
             try:
                 dto = schemas.AdminBookingDTO(
@@ -211,6 +214,7 @@ def new_booking(request):
                     customer_email=form.cleaned_data["customer_email"],
                     customer_phone=form.cleaned_data.get("customer_phone", ""),
                     notes=form.cleaned_data.get("notes", ""),
+                    practitioner_id=form.cleaned_data.get("practitioner_id"),
                 )
                 appt = services.create_admin_booking(dto)
                 messages.success(request, f"Booking created for {appt.customer_name}.")
@@ -218,7 +222,7 @@ def new_booking(request):
             except (ServiceError, ValueError) as e:
                 messages.error(request, str(e))
     else:
-        form = AdminBookingForm(services_qs=services_qs)
+        form = AdminBookingForm(services_qs=services_qs, practitioners_qs=practitioners_qs)
 
     return render(request, "dashboard/new_booking.html", {
         "form": form,
@@ -232,8 +236,8 @@ def new_booking(request):
 def services_list(request):
     business = _get_business()
     return render(request, "dashboard/services.html", {
-        "services": Service.objects.filter(business=business).order_by("name"),
-        "form": ServiceForm(),
+        "services": Service.objects.filter(business=business).prefetch_related("practitioners").order_by("name"),
+        "form": ServiceForm(practitioners_qs=services.get_practitioners()),
     })
 
 
@@ -242,7 +246,8 @@ def service_create(request):
     business = _get_business()
 
     if request.method == "POST":
-        form = ServiceForm(request.POST)
+        practitioners_qs = services.get_practitioners()
+        form = ServiceForm(request.POST, practitioners_qs=practitioners_qs)
         if form.is_valid():
             try:
                 dto = schemas.ServiceDTO(
@@ -252,6 +257,7 @@ def service_create(request):
                     price=float(form.cleaned_data["price"]),
                     color=form.cleaned_data["color"],
                     is_active=form.cleaned_data["is_active"],
+                    practitioner_ids=[user.id for user in form.cleaned_data["practitioners"]],
                 )
                 svc = services.create_service(dto, business)
                 messages.success(request, f"'{svc.name}' created.")
@@ -259,12 +265,13 @@ def service_create(request):
             except (ServiceError, ValueError) as e:
                 messages.error(request, str(e))
     else:
-        form = ServiceForm()
+        practitioners_qs = services.get_practitioners()
+        form = ServiceForm(practitioners_qs=practitioners_qs)
 
     return render(request, "dashboard/services.html", {
         "form": form,
         "action": "create",
-        "services": Service.objects.filter(business=business).order_by("name"),
+        "services": Service.objects.filter(business=business).prefetch_related("practitioners").order_by("name"),
     })
 
 
@@ -274,7 +281,8 @@ def service_edit(request, pk):
     svc = get_object_or_404(Service, pk=pk, business=business)
 
     if request.method == "POST":
-        form = ServiceForm(request.POST, instance=svc)
+        practitioners_qs = services.get_practitioners()
+        form = ServiceForm(request.POST, instance=svc, practitioners_qs=practitioners_qs)
         if form.is_valid():
             try:
                 dto = schemas.ServiceDTO(
@@ -285,6 +293,7 @@ def service_edit(request, pk):
                     price=float(form.cleaned_data["price"]),
                     color=form.cleaned_data["color"],
                     is_active=form.cleaned_data["is_active"],
+                    practitioner_ids=[user.id for user in form.cleaned_data["practitioners"]],
                 )
                 svc = services.update_service(dto, business)
                 messages.success(request, f"'{svc.name}' updated.")
@@ -292,13 +301,14 @@ def service_edit(request, pk):
             except (ServiceError, ValueError) as e:
                 messages.error(request, str(e))
     else:
-        form = ServiceForm(instance=svc)
+        practitioners_qs = services.get_practitioners()
+        form = ServiceForm(instance=svc, practitioners_qs=practitioners_qs)
 
     return render(request, "dashboard/services.html", {
         "form": form,
         "action": "edit",
         "editing": svc,
-        "services": Service.objects.filter(business=business).order_by("name"),
+        "services": Service.objects.filter(business=business).prefetch_related("practitioners").order_by("name"),
     })
 
 
@@ -373,29 +383,53 @@ def availability(request):
 @owner_required
 def blocked_times(request):
     business = _get_business()
-    # Upcoming first, then past — soonest upcoming at top
-    blocked = BlockedTime.objects.filter(business=business).order_by("start_datetime")
+    blocked_qs = BlockedTime.objects.select_related("practitioner").filter(business=business).order_by("start_datetime")
+
+    paginator = Paginator(blocked_qs, BLOCKED_TIMES_PER_PAGE)
+    page_number = request.GET.get("page")
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    blocked = list(page_obj.object_list)
+    services.attach_block_conflicts(blocked, business)
+    practitioners_qs = services.get_practitioners()
 
     if request.method == "POST":
-        form = BlockedTimeForm(request.POST)
+        form = BlockedTimeForm(request.POST, practitioners_qs=practitioners_qs)
         if form.is_valid():
             try:
                 dto = schemas.BlockedTimeDTO(
                     start_datetime=form.cleaned_data["start_datetime"],
                     end_datetime=form.cleaned_data["end_datetime"],
                     reason=form.cleaned_data.get("reason", ""),
+                    practitioner_id=form.cleaned_data["practitioner"].id if form.cleaned_data.get("practitioner") else None,
                 )
                 services.add_blocked_time(dto, business)
-                messages.success(request, "Blocked time added.")
+                conflicts = services.get_block_conflicts(dto, business)
+                conflict_count = conflicts.count()
+                if conflict_count:
+                    messages.warning(
+                        request,
+                        f"Blocked time added, but {conflict_count} existing booking(s) overlap. Review them below.",
+                    )
+                else:
+                    messages.success(request, "Blocked time added.")
                 return redirect("dashboard:blocked_times")
             except (ServiceError, ValueError) as e:
                 messages.error(request, str(e))
     else:
-        form = BlockedTimeForm()
+        form = BlockedTimeForm(practitioners_qs=practitioners_qs)
 
     return render(request, "dashboard/blocked_times.html", {
         "blocked_times": blocked,
         "form": form,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "total_count": paginator.count,
     })
 
 

@@ -2,6 +2,8 @@ import logging
 from datetime import datetime, timedelta, date as date_type, time as time_type
 
 from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 from django.core.cache import cache
 
@@ -10,6 +12,7 @@ from .models import Appointment
 from .schemas import CreateBookingDTO
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class ServiceError(Exception):
@@ -55,6 +58,122 @@ def _slot_is_available(slot_start: datetime, slot_end: datetime, booked_qs) -> b
     )
 
 
+def _active_practitioners_qs():
+    return User.objects.filter(
+        is_active=True,
+        userprofile__role__in=["owner", "staff"],
+    ).order_by("first_name", "email", "username")
+
+
+def get_eligible_practitioners(service: Service):
+    """
+    Practitioners assigned to this service.
+    If none are assigned, any active owner/staff member can perform it.
+    """
+    assigned = service.practitioners.filter(is_active=True)
+    if assigned.exists():
+        return assigned.order_by("first_name", "email", "username")
+    return _active_practitioners_qs()
+
+
+def _practitioner_is_available(
+    practitioner,
+    service: Service,
+    slot_start: datetime,
+    slot_end: datetime,
+    blocked_qs,
+    booked_qs,
+) -> bool:
+    if _overlaps_blocked(
+        slot_start,
+        slot_end,
+        [block for block in blocked_qs if block.practitioner_id in (None, practitioner.id)],
+    ):
+        return False
+
+    for appt in booked_qs:
+        if not (appt.start_datetime < slot_end and appt.end_datetime > slot_start):
+            continue
+        if appt.status == Appointment.Status.CANCELLED:
+            continue
+        if appt.practitioner_id == practitioner.id:
+            return False
+        if appt.practitioner_id is None and appt.service_id == service.id:
+            return False
+    return True
+
+
+def get_available_practitioner(
+    service: Service,
+    slot_start: datetime,
+    practitioner_id: int | None = None,
+):
+    """Return a practitioner who can take this slot, or None."""
+    practitioners = get_eligible_practitioners(service)
+    if practitioner_id:
+        practitioners = practitioners.filter(id=practitioner_id)
+    return _available_practitioner_for_slot(service, slot_start, list(practitioners))
+
+
+def _available_practitioner_for_slot(
+    service: Service,
+    slot_start: datetime,
+    practitioners: list,
+):
+    """Return an available practitioner from a preselected list, or None."""
+    slot_end = slot_start + timedelta(minutes=service.duration_minutes)
+    if not practitioners:
+        return None
+
+    blocked = list(
+        BlockedTime.objects.filter(
+            business=service.business,
+            start_datetime__lt=slot_end,
+            end_datetime__gt=slot_start,
+        )
+    )
+    booked = list(
+        Appointment.objects.select_related("service").filter(
+            start_datetime__lt=slot_end,
+            end_datetime__gt=slot_start,
+        ).filter(
+            Q(practitioner__in=practitioners) |
+            Q(practitioner__isnull=True, service=service)
+        ).exclude(status=Appointment.Status.CANCELLED)
+    )
+
+    for practitioner in practitioners:
+        if _practitioner_is_available(practitioner, service, slot_start, slot_end, blocked, booked):
+            return practitioner
+    return None
+
+
+def _requested_slot_is_bookable(service: Service, slot_start: datetime) -> bool:
+    avail = WeeklyAvailability.objects.filter(
+        business=service.business,
+        day_of_week=slot_start.date().weekday(),
+        is_active=True,
+    ).first()
+    if not avail:
+        return False
+
+    slot_end = slot_start + timedelta(minutes=service.duration_minutes)
+    min_bookable = timezone.now() + timedelta(minutes=service.business.booking_lead_time)
+    window_start = _combine(slot_start.date(), avail.start_time)
+    window_end = _combine(slot_start.date(), avail.end_time)
+    step_seconds = service.duration_minutes * 60
+    offset_seconds = (slot_start - window_start).total_seconds()
+
+    return (
+        slot_start >= min_bookable
+        and slot_start >= window_start
+        and slot_end <= window_end
+        and offset_seconds >= 0
+        and offset_seconds % step_seconds == 0
+        and not _overlaps_daily_break(slot_start, slot_end, service.business)
+    )
+
+
 def _invalidate_slot_cache(service: Service, dt: datetime):
     """
     Invalidate cached slots and dates when bookings change.
@@ -63,6 +182,18 @@ def _invalidate_slot_cache(service: Service, dt: datetime):
     target_date = dt.date() if isinstance(dt, datetime) else dt
     cache.delete(f"available_slots:{service.id}:{target_date}")
     cache.delete(f"available_dates:{service.id}:{target_date.year}:{target_date.month}")
+
+
+def invalidate_slot_cache_for_range(service: Service, start_dt: datetime, end_dt: datetime):
+    cursor = start_dt.date()
+    end_date = end_dt.date()
+    seen_months = set()
+    while cursor <= end_date:
+        cache.delete(f"available_slots:{service.id}:{cursor}")
+        seen_months.add((cursor.year, cursor.month))
+        cursor += timedelta(days=1)
+    for year, month in seen_months:
+        cache.delete(f"available_dates:{service.id}:{year}:{month}")
 
 
 #  SLOT ALGORITHM 
@@ -105,16 +236,22 @@ def _compute_available_slots(service: Service, target_date: date_type) -> list:
     window_end = _combine(target_date, avail.end_time)
     step = timedelta(minutes=service.duration_minutes)
 
-    blocked = BlockedTime.objects.filter(
+    practitioners = list(get_eligible_practitioners(service))
+    if not practitioners:
+        return []
+
+    blocked = list(BlockedTime.objects.filter(
         business=service.business,
         start_datetime__lt=window_end,
         end_datetime__gt=window_start,
-    )
+    ))
 
     booked = list(
-        Appointment.objects.filter(
-            service=service,
+        Appointment.objects.select_related("service").filter(
             start_datetime__date=target_date,
+        ).filter(
+            Q(practitioner__in=practitioners) |
+            Q(practitioner__isnull=True, service=service)
         ).exclude(status=Appointment.Status.CANCELLED)
     )
 
@@ -125,13 +262,13 @@ def _compute_available_slots(service: Service, target_date: date_type) -> list:
         if cursor < min_bookable:
             cursor += step
             continue
-        if _overlaps_blocked(cursor, slot_end, blocked):
-            cursor += step
-            continue
         if _overlaps_daily_break(cursor, slot_end, service.business):
             cursor += step
             continue
-        if _slot_is_available(cursor, slot_end, booked):
+        if any(
+            _practitioner_is_available(practitioner, service, cursor, slot_end, blocked, booked)
+            for practitioner in practitioners
+        ):
             slots.append(cursor)
         cursor += step
 
@@ -172,12 +309,18 @@ def get_available_dates(service: Service, year: int, month: int) -> list[date_ty
         )
     }
 
+    practitioners = list(get_eligible_practitioners(service))
+    if not practitioners:
+        return []
+
     # Single query for all appointments in the month
     booked_by_date: dict[date_type, list] = {}
-    for appt in Appointment.objects.filter(
-        service=service,
+    for appt in Appointment.objects.select_related("service").filter(
         start_datetime__date__gte=month_start,
         start_datetime__date__lte=month_end,
+    ).filter(
+        Q(practitioner__in=practitioners) |
+        Q(practitioner__isnull=True, service=service)
     ).exclude(status=Appointment.Status.CANCELLED):
         d = appt.start_datetime.date()
         booked_by_date.setdefault(d, []).append(appt)
@@ -216,13 +359,13 @@ def get_available_dates(service: Service, year: int, month: int) -> list[date_ty
             if cursor < min_bookable:
                 cursor += step
                 continue
-            if _overlaps_blocked(cursor, slot_end, blocked):
-                cursor += step
-                continue
             if _overlaps_daily_break(cursor, slot_end, service.business):
                 cursor += step
                 continue
-            if _slot_is_available(cursor, slot_end, booked):
+            if any(
+                _practitioner_is_available(practitioner, service, cursor, slot_end, blocked, booked)
+                for practitioner in practitioners
+            ):
                 found = True
                 break
             cursor += step
@@ -256,12 +399,19 @@ def create_booking(dto: CreateBookingDTO) -> Appointment:
     )
     end_dt = dto.start_datetime + timedelta(minutes=service.duration_minutes)
 
-    available = _compute_available_slots(service, dto.start_datetime.date())  # Skip cache for atomicity
-    if dto.start_datetime not in available:
+    if not _requested_slot_is_bookable(service, dto.start_datetime):
         raise ServiceError("Sorry, that slot is no longer available. Please choose another time.")
+
+    practitioners_qs = get_eligible_practitioners(service).select_for_update()
+    if dto.practitioner_id:
+        practitioners_qs = practitioners_qs.filter(id=dto.practitioner_id)
+    practitioner = _available_practitioner_for_slot(service, dto.start_datetime, list(practitioners_qs))
+    if not practitioner:
+        raise ServiceError("Sorry, that practitioner is no longer available. Please choose another time.")
 
     appointment = Appointment.objects.create(
         service=service,
+        practitioner=practitioner,
         customer_name=dto.customer_name,
         customer_email=dto.customer_email,
         customer_phone=dto.customer_phone,

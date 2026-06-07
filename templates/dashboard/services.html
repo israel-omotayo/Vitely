@@ -54,6 +54,16 @@
                   <span class="text-border">·</span>
                   <span class="font-semibold text-primary">${{ svc.price|intcomma }}</span>
                 </div>
+                <p class="text-xs text-muted mt-2">
+                  Practitioners:
+                  {% if svc.practitioners.all %}
+                    {% for practitioner in svc.practitioners.all %}
+                      <span class="font-medium text-text-base">{{ practitioner.get_full_name|default:practitioner.email|default:practitioner.username }}</span>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="font-medium text-text-base">Any active practitioner</span>
+                  {% endif %}
+                </p>
               </div>
 
               <!-- Actions -->
@@ -182,6 +192,23 @@
             <label for="id_is_active" class="text-sm text-text-base cursor-pointer select-none">
               Active (visible to customers)
             </label>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-text-base uppercase tracking-wide mb-1.5">
+              Practitioners
+            </label>
+            <div class="space-y-2 border border-border rounded-xl bg-bg px-3 py-2.5">
+              {% for checkbox in form.practitioners %}
+                <label class="flex items-center gap-2 text-sm text-text-base">
+                  {{ checkbox.tag }}
+                  <span>{{ checkbox.choice_label }}</span>
+                </label>
+              {% empty %}
+                <p class="text-xs text-muted">Invite staff to assign this service to individual practitioners.</p>
+              {% endfor %}
+            </div>
+            <p class="text-xs text-muted mt-1.5">Leave empty to let any active practitioner take this service.</p>
           </div>
 
         </div>
