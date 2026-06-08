@@ -165,7 +165,11 @@ def appointments(request):
 @staff_required
 def appointment_detail(request, pk):
     business = _get_business()
-    appt = get_object_or_404(Appointment, pk=pk, service__business=business)
+    appt = get_object_or_404(
+        Appointment.objects.select_related("service__business", "practitioner"),
+        pk=pk,
+        service__business=business,
+    )
     return render(request, "dashboard/appointment_detail.html", {
         "appointment": appt,
         "status_choices": Appointment.Status.choices,
@@ -409,8 +413,7 @@ def blocked_times(request):
                     practitioner_id=form.cleaned_data["practitioner"].id if form.cleaned_data.get("practitioner") else None,
                 )
                 services.add_blocked_time(dto, business)
-                conflicts = services.get_block_conflicts(dto, business)
-                conflict_count = conflicts.count()
+                conflict_count = services.count_block_conflicts(dto, business)
                 if conflict_count:
                     messages.warning(
                         request,

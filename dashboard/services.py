@@ -16,8 +16,11 @@ from django.db.models import Q
 from django.utils import timezone
 
 from bookings.models import Appointment
-from bookings.services import ServiceError, invalidate_slot_cache_for_range # single exception class
-from bookings.emails import send_staff_invite_email
+from bookings.services import (
+    ServiceError,
+    invalidate_service_slot_cache,
+) # single exception class
+from bookings.emails import send_blocked_time_conflict_email, send_staff_invite_email
 from accounts.models import UserProfile
 
 from .models import (
@@ -135,14 +138,10 @@ def create_admin_booking(dto: AdminBookingDTO) -> Appointment:
     Skips email verification — admin bookings are confirmed immediately.
     Still re-checks slot availability inside the transaction.
     """
-    from bookings.services import create_booking, get_available_slots
+    from bookings.services import create_booking
     from bookings.schemas import CreateBookingDTO
 
     service = Service.objects.select_related("business").get(id=dto.service_id)
-    available = get_available_slots(service, dto.start_datetime.date())
-    if dto.start_datetime not in available:
-        raise ServiceError("That slot is no longer available. Please choose another time.")
-
     booking_dto = CreateBookingDTO(
         service_id=dto.service_id,
         start_datetime=dto.start_datetime,
@@ -201,9 +200,7 @@ def update_service(dto: ServiceDTO, business: BusinessProfile) -> Service:
 
 
 def _invalidate_service_months(service: Service):
-    start = timezone.now()
-    end = start + timedelta(days=120)
-    invalidate_slot_cache_for_range(service, start, end)
+    invalidate_service_slot_cache(service)
 
 
 @transaction.atomic
@@ -279,6 +276,17 @@ def get_block_conflicts(dto: BlockedTimeDTO, business: BusinessProfile):
     return qs.order_by("start_datetime")
 
 
+def count_block_conflicts(dto: BlockedTimeDTO, business: BusinessProfile) -> int:
+    qs = Appointment.objects.filter(
+        service__business=business,
+        start_datetime__lt=dto.end_datetime,
+        end_datetime__gt=dto.start_datetime,
+    ).exclude(status=Appointment.Status.CANCELLED)
+    if dto.practitioner_id:
+        qs = qs.filter(Q(practitioner_id=dto.practitioner_id) | Q(practitioner__isnull=True))
+    return qs.count()
+
+
 def attach_block_conflicts(blocked_times: list[BlockedTime], business: BusinessProfile) -> list[BlockedTime]:
     if not blocked_times:
         return blocked_times
@@ -320,18 +328,24 @@ def add_blocked_time(dto: BlockedTimeDTO, business: BusinessProfile) -> BlockedT
     )
     logger.info("Blocked time added: %s → %s", dto.start_datetime, dto.end_datetime)
     for svc in Service.objects.filter(business=business, is_active=True):
-        invalidate_slot_cache_for_range(svc, dto.start_datetime, dto.end_datetime)
+        invalidate_service_slot_cache(svc)
+    conflicts = list(get_block_conflicts(dto, business))
+    if conflicts:
+        transaction.on_commit(
+            lambda: [
+                send_blocked_time_conflict_email(appt)
+                for appt in conflicts
+            ]
+        )
     return bt
 
 
 @transaction.atomic
 def delete_blocked_time(pk: int, business: BusinessProfile) -> None:
     bt = BlockedTime.objects.get(pk=pk, business=business)
-    start_dt = bt.start_datetime
-    end_dt = bt.end_datetime
     bt.delete()
     for svc in Service.objects.filter(business=business, is_active=True):
-        invalidate_slot_cache_for_range(svc, start_dt, end_dt)
+        invalidate_service_slot_cache(svc)
     logger.info("Blocked time deleted: id=%s", pk)
 
 

@@ -151,6 +151,10 @@ class SlotGenerationTests(TestCase):
         # but tomorrow will be blocked if tomorrow is a Monday.
         # Test that a date within lead time returns empty slots.
         today = timezone.localdate()
+        WeeklyAvailability.objects.filter(
+            business=self.business,
+            day_of_week=today.weekday(),
+        ).delete()
         make_availability(self.business, day_of_week=today.weekday(),
                           start="09:00", end="17:00")
         slots = _compute_available_slots(self.service, today)
@@ -290,10 +294,12 @@ class CacheInvalidationTests(TestCase):
 
     def test_create_booking_invalidates_slot_cache(self):
         from django.core.cache import cache
+        from bookings.services import _service_slot_cache_version
 
         # Prime the cache
         get_available_slots(self.service, self.monday)
-        cache_key = f"available_slots:{self.service.id}:{self.monday}"
+        version = _service_slot_cache_version(self.service.id)
+        cache_key = f"available_slots:{self.service.id}:v{version}:{self.monday}"
         self.assertIsNotNone(cache.get(cache_key))
 
         # Create a booking — should bust the cache
@@ -304,11 +310,12 @@ class CacheInvalidationTests(TestCase):
 
     def test_create_booking_invalidates_date_cache(self):
         from django.core.cache import cache
-        from bookings.services import get_available_dates
+        from bookings.services import _service_slot_cache_version, get_available_dates
 
         # Prime the date cache
         get_available_dates(self.service, self.monday.year, self.monday.month)
-        date_key = f"available_dates:{self.service.id}:{self.monday.year}:{self.monday.month}"
+        version = _service_slot_cache_version(self.service.id)
+        date_key = f"available_dates:{self.service.id}:v{version}:{self.monday.year}:{self.monday.month}"
         self.assertIsNotNone(cache.get(date_key))
 
         dto = make_dto(self.service, self.slot)
@@ -318,6 +325,7 @@ class CacheInvalidationTests(TestCase):
 
     def test_cancel_booking_invalidates_slot_cache(self):
         from django.core.cache import cache
+        from bookings.services import _service_slot_cache_version
 
         dto  = make_dto(self.service, self.slot)
         appt = create_booking(dto)
@@ -329,7 +337,8 @@ class CacheInvalidationTests(TestCase):
 
         # Prime the cache again
         get_available_slots(self.service, self.monday)
-        cache_key = f"available_slots:{self.service.id}:{self.monday}"
+        version = _service_slot_cache_version(self.service.id)
+        cache_key = f"available_slots:{self.service.id}:v{version}:{self.monday}"
         self.assertIsNotNone(cache.get(cache_key))
 
         cancel_booking(str(appt.confirmation_token))

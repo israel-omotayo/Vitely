@@ -14,6 +14,8 @@ from .schemas import CreateBookingDTO
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+SLOT_CACHE_VERSION_TIMEOUT = 60 * 60 * 24 * 30
+
 
 class ServiceError(Exception):
     """Raised for expected, user-facing errors. Views catch this and
@@ -180,20 +182,23 @@ def _invalidate_slot_cache(service: Service, dt: datetime):
     Called after create/cancel/confirm to ensure fresh availability.
     """
     target_date = dt.date() if isinstance(dt, datetime) else dt
-    cache.delete(f"available_slots:{service.id}:{target_date}")
-    cache.delete(f"available_dates:{service.id}:{target_date.year}:{target_date.month}")
+    version = _service_slot_cache_version(service.id)
+    cache.delete_many([
+        f"available_slots:{service.id}:v{version}:{target_date}",
+        f"available_dates:{service.id}:v{version}:{target_date.year}:{target_date.month}",
+    ])
 
 
-def invalidate_slot_cache_for_range(service: Service, start_dt: datetime, end_dt: datetime):
-    cursor = start_dt.date()
-    end_date = end_dt.date()
-    seen_months = set()
-    while cursor <= end_date:
-        cache.delete(f"available_slots:{service.id}:{cursor}")
-        seen_months.add((cursor.year, cursor.month))
-        cursor += timedelta(days=1)
-    for year, month in seen_months:
-        cache.delete(f"available_dates:{service.id}:{year}:{month}")
+def _service_slot_cache_version(service_id: int) -> int:
+    return cache.get(f"availability_version:{service_id}", 1)
+
+
+def invalidate_service_slot_cache(service: Service):
+    version_key = f"availability_version:{service.id}"
+    try:
+        cache.incr(version_key)
+    except ValueError:
+        cache.set(version_key, 2, timeout=SLOT_CACHE_VERSION_TIMEOUT)
 
 
 #  SLOT ALGORITHM 
@@ -207,7 +212,8 @@ def get_available_slots(service: Service, target_date: date_type) -> list:
     Cache is on the public read path only — dashboard always queries fresh.
     Invalidated immediately when a booking is created or cancelled.
     """
-    cache_key = f"available_slots:{service.id}:{target_date}"
+    version = _service_slot_cache_version(service.id)
+    cache_key = f"available_slots:{service.id}:v{version}:{target_date}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -289,7 +295,8 @@ def get_available_dates(service: Service, year: int, month: int) -> list[date_ty
     """
     import calendar as cal_module
 
-    cache_key = f"available_dates:{service.id}:{year}:{month}"
+    version = _service_slot_cache_version(service.id)
+    cache_key = f"available_dates:{service.id}:v{version}:{year}:{month}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -393,7 +400,6 @@ def create_booking(dto: CreateBookingDTO) -> Appointment:
     """
     service = (
         Service.objects
-        .select_for_update()
         .select_related("business")
         .get(id=dto.service_id)
     )

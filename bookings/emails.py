@@ -156,6 +156,35 @@ def send_cancellation_email(appointment: Appointment, request=None) -> None:
     )
 
 
+# Existing booking affected by a new blocked time
+
+def send_blocked_time_conflict_email(appointment: Appointment, request=None) -> None:
+    booking_path = reverse(
+        "bookings:booking_detail",
+        kwargs={"token": str(appointment.confirmation_token)},
+    )
+    booking_url = _absolute_url(booking_path, request)
+
+    html = build_vitely_email(
+        heading="Your appointment may need to be rescheduled",
+        message=(
+            f"Hi {appointment.customer_name}, your <strong>{appointment.service.name}</strong> "
+            f"appointment on <strong>{appointment.start_datetime:%A, %d %B %Y at %H:%M}</strong> "
+            "now overlaps a time when the team is unavailable. Your booking has not been cancelled. "
+            "We will contact you if it needs to be moved."
+        ),
+        action_content=f'<a href="{booking_url}" class="btn">View booking</a>',
+        notice="If you have questions, please contact us directly.",
+    )
+
+    send_email_async(
+        to_email=appointment.customer_email,
+        subject=f"Vitely · Update about your appointment on {appointment.start_datetime:%d %b %Y}",
+        html_content=html,
+        context=f"blocked-conflict-{appointment.id}",
+    )
+
+
 # 24hr reminder → customer
 
 def send_reminder_email(appointment: Appointment, request=None) -> None:
