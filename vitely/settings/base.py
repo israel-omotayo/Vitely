@@ -135,16 +135,6 @@ CRON_SECRET = os.getenv("CRON_SECRET", "")
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Cloudinary
-# The cloudinary SDK reads CLOUDINARY_URL from the environment automatically.
-# Format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
-# Just set CLOUDINARY_URL in your .env — no extra config needed here.
-import cloudinary
-
-# cloudinary.config() is called implicitly from CLOUDINARY_URL env var.
-# Set secure=True globally so all generated URLs use https.
-cloudinary.config(secure=True)
-
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
