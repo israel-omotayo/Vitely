@@ -6,7 +6,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         if not settings.DEBUG:
-            self.stderr.write("❌  Not DEBUG. Refusing."); return
+            self.stderr.write("Not DEBUG. Refusing."); return
 
         from django.contrib.auth import get_user_model
         from dashboard.models import BusinessProfile
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         EMAIL, PASS = "dev@vitely.local", "devpassword123"
 
         if not BusinessProfile.objects.exists():
-            self.stderr.write("❌  Run /accounts/setup/ first."); return
+            self.stderr.write("Run /accounts/setup/ first."); return
 
         if User.objects.filter(email=EMAIL).exists():
             self.stdout.write(f"✓  Already exists: {EMAIL} / {PASS}"); return
@@ -24,5 +24,5 @@ class Command(BaseCommand):
         user.userprofile.role = "owner"
         user.userprofile.save(update_fields=["role"])
         self.stdout.write(self.style.SUCCESS(
-            f"✅  Dev owner ready!\n   Email: {EMAIL}\n   Pass:  {PASS}\n   Login: /accounts/login/"
+            f"Dev owner ready!\n   Email: {EMAIL}\n   Pass:  {PASS}\n   Login: /accounts/login/"
         ))
