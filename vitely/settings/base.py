@@ -51,6 +51,7 @@ MIDDLEWARE = [
     # It intercepts /static/ requests before they ever hit Django's routing,
     # so WSGI workers are never tied up serving JS/CSS files.
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     'core.middleware.EnforceCustomDomainMiddleware', # for custom domain
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

@@ -106,6 +106,45 @@ SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True  # allows submission to browser HSTS preload lists
+SECURE_REFERRER_POLICY = "same-origin"
+
+# The current templates use Tailwind CDN configuration, htmx, Chart.js,
+# FullCalendar, Google Fonts, and several inline style/script blocks.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: https:",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net",
+    "connect-src 'self'",
+    "upgrade-insecure-requests",
+])
+
+PERMISSIONS_POLICY = ", ".join([
+    "accelerometer=()",
+    "autoplay=()",
+    "camera=()",
+    "display-capture=()",
+    "encrypted-media=()",
+    "fullscreen=(self)",
+    "geolocation=()",
+    "gyroscope=()",
+    "magnetometer=()",
+    "microphone=()",
+    "midi=()",
+    "payment=()",
+    "picture-in-picture=()",
+    "publickey-credentials-get=()",
+    "screen-wake-lock=()",
+    "sync-xhr=()",
+    "usb=()",
+    "web-share=()",
+    "xr-spatial-tracking=()",
+])
 
 # Trusted proxy (Render)
 #
