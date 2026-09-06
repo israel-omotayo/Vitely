@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% load service_icons %}
-{% block title %}Book {{ service.name }} — {{ business.name|default:"Vitely" }}{% endblock %}
+{% block title %}Book {{ service.name }} | {{ business.name|default:"Vitely" }}{% endblock %}
 {% block main_class %}max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1{% endblock %}
 
 {% block content %}
