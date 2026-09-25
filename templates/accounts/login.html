@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
-  <div class="w-full max-w-xl">
+  <div class="w-full max-w-[440px]">
 
     <div class="text-center mb-8">
       <span class="text-3xl font-bold text-primary tracking-tight">Vitely</span>
       <p class="text-muted text-sm mt-1">Staff &amp; owner sign in</p>
     </div>
 
-    <div class="bg-surface rounded-2xl border border-border shadow-sm px-8 py-8 sm:px-12 sm:py-10">
+    <div class="bg-surface rounded-2xl border border-border shadow-sm px-8 py-10">
 
         <form method="post" novalidate>
           {% csrf_token %}

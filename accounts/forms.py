@@ -9,10 +9,10 @@ from core.utils import send_email_async
 
 class LoginForm(forms.Form):
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={"placeholder": "Email address", "autofocus": True})
+        widget=forms.EmailInput(attrs={"placeholder": "your@email.com", "autofocus": True})
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "Password"})
+        widget=forms.PasswordInput(attrs={"placeholder": "••••••••"})
     )
 
 
