@@ -71,7 +71,7 @@
     <h2 class="font-semibold text-text-base text-sm">Today's appointments</h2>
     <a href="{% url 'dashboard:appointments' %}?date={% now 'Y-m-d' %}"
        class="text-xs text-primary hover:underline">
-      View all →
+      View all
     </a>
   </div>
 
@@ -128,7 +128,7 @@
       <p class="text-sm text-muted">No appointments today.</p>
       <a href="{% url 'dashboard:new_booking' %}"
          class="mt-3 text-sm text-primary hover:underline">
-        Create one →
+        Create one
       </a>
     </div>
   {% endif %}

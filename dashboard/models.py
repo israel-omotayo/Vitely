@@ -105,9 +105,9 @@ class StaffInvite(models.Model):
     Represents a pending invitation for a staff member.
 
     Flow:
-        1. Owner submits StaffInviteForm → send_staff_invite() creates this record
+        1. Owner submits StaffInviteForm, send_staff_invite() creates this record
         2. Invite email sent with a link to /invite/<token>/
-        3. Staff clicks link → accept_staff_invite() validates token,
+        3. Staff clicks link, accept_staff_invite() validates token,
            creates User + UserProfile(role='staff'), sets accepted=True
 
     Token is a UUID so it is unguessable and unique.

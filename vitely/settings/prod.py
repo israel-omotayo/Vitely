@@ -63,7 +63,7 @@ if REDIS_URL:
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"
 
-# Sessions → Redis
+# Sessions: Redis
 # Django's default session backend writes every logged-in page request to the
 # django_session DB table. At 10k concurrent users this creates punishing write
 # contention on a table that grows unbounded without manual clearsessions runs.

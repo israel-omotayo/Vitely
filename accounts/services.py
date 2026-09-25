@@ -81,7 +81,7 @@ def create_owner(dto: OwnerSetupDTO):
 
 
 def _slugify_business_name(name: str) -> str:
-    """e.g Converts 'Serenity Wellness Clinic' → 'serenity-wellness-clinic'."""
+    """e.g Converts 'Serenity Wellness Clinic' to 'serenity-wellness-clinic'."""
     from django.utils.text import slugify
     return slugify(name)
 
@@ -94,9 +94,9 @@ def login_user(request, dto: LoginDTO) -> tuple:
     Returns (user, status_string) so the view can decide what to do.
 
     Status values:
-        "success"   → authenticated, redirect to dashboard
-        "invalid"   → wrong email or password
-        "inactive"  → account exists but is_active=False (shouldn't happen in normal Vitely flow, but guard anyway)
+        "success"    authenticated, redirect to dashboard
+        "invalid"    wrong email or password
+        "inactive"   account exists but is_active=False (shouldn't happen in normal Vitely flow, but guard anyway)
 
     Never reveals whether the email exists — both wrong-email and
     wrong-password return "invalid".

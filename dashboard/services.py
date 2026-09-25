@@ -127,7 +127,7 @@ def admin_update_appointment(dto: AppointmentStatusUpdateDTO) -> Appointment:
     appt.status = dto.new_status
     appt.save(update_fields=["status"])
 
-    logger.info("Appointment %s → %s", dto.appointment_id, dto.new_status)
+    logger.info("Appointment %s: %s", dto.appointment_id, dto.new_status)
     return appt
 
 
@@ -208,7 +208,7 @@ def toggle_service(pk: int, business: BusinessProfile) -> Service:
     svc = Service.objects.get(pk=pk, business=business)
     svc.is_active = not svc.is_active
     svc.save(update_fields=["is_active"])
-    logger.info("Service '%s' toggled → %s", svc.name, svc.is_active)
+    logger.info("Service '%s' toggled: %s", svc.name, svc.is_active)
     return svc
 
 
@@ -326,7 +326,7 @@ def add_blocked_time(dto: BlockedTimeDTO, business: BusinessProfile) -> BlockedT
         end_datetime=dto.end_datetime,
         reason=dto.reason,
     )
-    logger.info("Blocked time added: %s → %s", dto.start_datetime, dto.end_datetime)
+    logger.info("Blocked time added: %s: %s", dto.start_datetime, dto.end_datetime)
     for svc in Service.objects.filter(business=business, is_active=True):
         invalidate_service_slot_cache(svc)
     conflicts = list(get_block_conflicts(dto, business))

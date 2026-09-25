@@ -16,8 +16,8 @@ class UserProfile(models.Model):
     UserProfile.objects.create() outside of services.py.
 
     Role meanings:
-        owner → full access including revenue, settings, staff management
-        staff → can manage appointments and view services (read-only),
+        owner: full access including revenue, settings, staff management
+        staff: can manage appointments and view services (read-only),
             cannot see revenue or touch any settings
     """
 

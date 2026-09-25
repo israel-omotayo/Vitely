@@ -43,7 +43,7 @@ def send_verification_email(appointment: Appointment, request=None) -> None:
     )
 
 
-# Booking confirmed → customer
+# Booking confirmed: customer
 
 def send_confirmation_email(appointment: Appointment, request=None) -> None:
     """
@@ -93,7 +93,7 @@ def send_confirmation_email(appointment: Appointment, request=None) -> None:
     )
 
 
-# New booking alert → admin + all staff
+# New booking alert: admin + all staff
 
 def send_new_booking_alert(appointment: Appointment, request=None) -> None:
     """Notifies the owner and all staff of a new confirmed booking."""
@@ -131,7 +131,7 @@ def send_new_booking_alert(appointment: Appointment, request=None) -> None:
         )
 
 
-# Booking cancelled → customer
+# Booking cancelled: customer
 
 def send_cancellation_email(appointment: Appointment, request=None) -> None:
     rebook_path = reverse("bookings:services")
@@ -185,7 +185,7 @@ def send_blocked_time_conflict_email(appointment: Appointment, request=None) -> 
     )
 
 
-# 24hr reminder → customer
+# 24hr reminder: customer
 
 def send_reminder_email(appointment: Appointment, request=None) -> None:
     booking_path = reverse(
@@ -252,7 +252,7 @@ def send_staff_invite_email(
     )
 
 
-# Magic link → customer lookup
+# Magic link: customer lookup
 
 def send_magic_link_email(email: str, lookup_token: str, request=None) -> None:
     """
